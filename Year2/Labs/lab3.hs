@@ -63,38 +63,81 @@ evalInst stack (i:is) = evalInst (eval stack i) is
 
 -- Exercise A8
 
-instructions :: [Instruction]
-instructions = [Pop, Add, Mul, Sub, Div]
-
-findMaxValue :: Stack -> Int -> [Instruction] -> Int
-findMaxValue _ x [] = x
-findMaxValue stack x (i:is)
-    | head (eval stack i) == Nothing = findMaxValue stack x is
-    | x < y = findMaxValue stack y is
-    | otherwise = findMaxValue stack x is
+findAllSMProgs :: Stack -> SMProg -> [SMProg]
+findAllSMProgs [_] p = [p]
+findAllSMProgs stack p = add ++ mul ++ sub ++ div ++ pop
     where
-        Just y = head (eval stack i)
+        add = findAllSMProgs (evalInst stack [Add]) ([Add] ++ p)
+        sub = findAllSMProgs (evalInst stack [Mul]) ([Mul] ++ p)
+        mul = findAllSMProgs (evalInst stack [Sub]) ([Sub] ++ p)
+        div = findAllSMProgs (evalInst stack [Div]) ([Div] ++ p)
+        pop = findAllSMProgs (evalInst stack [Pop]) ([Pop] ++ p)
 
-findMaxInst :: Stack -> [Instruction] -> [Instruction]
-findMaxInst _ [] = []
-findMaxInst stack (i:is)
-    | head (eval stack i) == Nothing = findMaxInst stack is
-    | a == x = i : findMaxInst stack is
-    | otherwise = findMaxInst stack is
+createPairs :: Stack -> [SMProg] -> [(Maybe Int, SMProg)]
+createPairs _ [] = []
+createPairs stack (p:ps) = (x, p) : createPairs stack ps
     where
-        Just a = head (eval stack i)
-        x = findMaxValue stack (-1000) instructions
+        x = head (evalInst stack p)
 
-constructList :: Stack -> [[Instruction]]
-constructList stack 
-    | length stack > 1 = findMaxInst stack instructions : constructList newStack
-    | otherwise = []
+findMaxValue :: [(Maybe Int, SMProg)] -> Int -> Int
+findMaxValue [] a = a
+findMaxValue ((x, _):xs) maxi
+    | x == Nothing = findMaxValue xs maxi
+    | maxi < a = findMaxValue xs a
+    | otherwise = findMaxValue xs maxi
     where
-        newStack = eval stack (head (findMaxInst stack instructions))
+        Just a = x
 
-cartProdN :: [[a]] -> [[a]]
-cartProdN = foldr (\xs as -> [ x : a | x <- xs, a <- as ]) [[]]
+findInst :: [(Maybe Int, SMProg)] -> Int -> [SMProg]
+findInst [] _ = []
+findInst ((x, y):xs) b
+    | x == Nothing = findInst xs b
+    | a == b = y : findInst xs b 
+    | otherwise = findInst xs b
+    where
+        Just a = x
 
 findMaxReducers :: Stack -> [SMProg]
 findMaxReducers [] = []
-findMaxReducers stack = cartProdN (constructList stack)
+findMaxReducers stack = findInst pairs maxi
+    where
+        pairs = createPairs stack (findAllSMProgs stack [])
+        maxi = findMaxValue pairs (-1000000)
+        
+-- Exercise A9
+
+evalPowerSequence :: Stack -> SMProg -> Stack
+evalPowerSequence stack [] = stack
+evalPowerSequence stack (p:ps)
+    | p == Dup = evalPowerSequence (eval stack p) ps
+    | p == Mul && length stack /= 1 = evalPowerSequence (eval stack p) ps
+    | otherwise = []
+
+createList :: Int -> [Instruction]
+createList l = replicate l Dup ++ replicate l Mul
+
+per :: Eq a => [a] -> [[a]]
+per xs = permutations xs
+
+prelucrate :: [[Instruction]] -> [[Instruction]]
+prelucrate [] = []
+prelucrate (x : xs)
+    | (head x == Dup) && (x!!(length x - 1) == Mul) = x : prelucrate xs
+    | otherwise = prelucrate xs
+
+findSolution :: [SMProg] -> Stack -> Int -> Bool
+findSolution [] _ _ = False
+findSolution (p:ps) stack k
+    | length s == 1 && result == y = True
+    | otherwise = findSolution ps stack k
+    where
+        Just result = head s
+        s = evalPowerSequence stack p
+        y = 2 ^ k
+
+isPossiblePower :: Int -> Int -> Bool
+isPossiblePower k l
+    | l == k - 1 = True
+    | l >= k = False
+    | l < 0 = False
+    | otherwise = findSolution (prelucrate (per (createList l))) [Just 2] k

@@ -27,3 +27,4 @@ Example:
 > findMaxReducers [Just 0, Just 1, Just 4, Just 5]
 > [[Add, Add, Mul], [Pop, Add Mul]]
 ```
+**Note!** A greedy algorithm won't deal with negative input. Therefore generating all solutions is the answer.

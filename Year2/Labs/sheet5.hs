@@ -76,3 +76,62 @@ instance Functor (Fun a) where
     fmap f (F g) = F (f.g)
 
 -- where f :: a -> b , g :: b -> c and we need a function in the output of type a -> c
+
+-- exercise 6
+
+data LTree a = LLeaf a | LNode (LTree a) (LTree a) deriving (Eq,Ord,Show,Read)
+data Direction a = L (LTree a) | R (LTree a)
+type Trail a = [Direction a]
+type Zipper a = (LTree a, Trail a)
+
+goLeft :: (LTree a, [Direction a]) -> (LTree a, [Direction a])
+goLeft  (LNode l r, ts) = (l, L r : ts)
+
+goRight :: (LTree a, [Direction a]) -> (LTree a, [Direction a])
+goRight (LNode l r, ts) = (r, R l : ts)
+
+goUp :: (LTree a, [Direction a]) -> (LTree a, [Direction a])
+goUp    (t , L r : ts) = (LNode t r , ts)
+goUp    (t , R l : ts) = (LNode l t , ts)
+
+increment :: Zipper Int -> Zipper Int
+increment (LLeaf x, ts) = (LLeaf (x+1), ts)
+
+goLeftMost :: Zipper a -> Zipper a
+goLeftMost (LLeaf a, ts) = (LLeaf a, ts)
+goLeftMost (LNode l r, ts) = goLeftMost $ goLeft (LNode l r,ts)
+
+goRightMost :: Zipper a -> Zipper a
+goRightMost (LLeaf a, ts) = (LLeaf a, ts)
+goRightMost (LNode l r, ts) = goRightMost $ goRight (LNode l r,ts)
+
+goRoot :: Zipper a -> Zipper a
+goRoot (t,[]) = (t,[])
+goRoot z = goRoot (goUp z)
+
+(-:) :: t1 -> (t1 -> t2) -> t2
+x -: f = f x
+
+-- increments by 1 the value of the 2nd leftmost and 2nd rightmost leaves in the tree
+incr2LR :: LTree Int -> LTree Int
+incr2LR (LLeaf a) = LLeaf a
+incr2LR tree = 
+ fst $ (tree,[]) -: goLeftMost -: goUp -: goRight -: goLeftMost -: increment -: goRoot 
+                 -: goRightMost -: goUp -: goLeft -: goRightMost -: increment -: goRoot
+
+-- exercise 7
+-- you must import Data.Graph
+-- if you uncomment this exercise, comment exercise 1
+-- 
+-- evenEdges :: [(Vertex, Vertex)]
+-- evenEdges = [(n, n + 1) | n <- [0,2..998]]
+-- 
+-- oddEdges :: [(Vertex, Vertex)]
+-- oddEdges = [(n, n `div` 5) | n <- [1, 3..999]]
+-- 
+-- graph :: Graph
+-- graph = buildG (0, 1000) (evenEdges ++ oddEdges)
+-- 
+-- decides whether there is a path between two given nodes in the graph defined above
+-- isReachable :: Int -> Int -> Bool
+-- isReachable n m = m `elem` reachable graph n

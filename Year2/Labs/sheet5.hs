@@ -37,3 +37,28 @@ eval = foldExpr id (+) (-)
 -- calculates the size of the AST (in nodes) that represents the expression
 size :: Expr -> Int
 size = foldExpr (const 1) (\x y -> x + y + 1) (\x y -> x + y + 1)
+
+-- exercise 4
+
+data Prop = Const Bool | Var Char | Not Prop | And Prop Prop | Imply Prop Prop
+data Form = Negative | Positive | Mixed | Either deriving (Eq, Ord, Show, Read)
+
+getForm :: Prop -> Form
+getForm (Const _) = Either
+getForm (Var _) = Positive
+getForm (Not p) = negateForm $ getForm p
+getForm (And p q) = andForm (getForm p) (getForm q)
+getForm (Imply p q) = andForm (negateForm $ getForm p) (getForm q)
+
+negateForm :: Form -> Form
+negateForm Negative = Positive
+negateForm Positive = Negative
+negateForm Either = Either
+negateForm Mixed = Mixed
+
+andForm :: Form -> Form -> Form
+andForm Positive Positive = Positive
+andForm Negative Negative = Negative
+andForm f Either = f
+andForm Either f = f
+andForm _ _ = Mixed

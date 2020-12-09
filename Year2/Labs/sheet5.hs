@@ -62,3 +62,17 @@ andForm Negative Negative = Negative
 andForm f Either = f
 andForm Either f = f
 andForm _ _ = Mixed
+
+-- exercise 5
+
+-- fmap :: (b -> c) -> Pair a b -> Pair a c
+data Pair a b = P (a, b)
+instance Functor (Pair a) where
+    fmap f (P (x,y)) = P (x, f y)
+
+-- fmap :: (b -> c) -> Fun a b -> Fun a c
+data Fun a b = F (a -> b)
+instance Functor (Fun a) where
+    fmap f (F g) = F (f.g)
+
+-- where f :: a -> b , g :: b -> c and we need a function in the output of type a -> c

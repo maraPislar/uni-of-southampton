@@ -121,7 +121,7 @@ incr2LR tree =
 
 -- exercise 7
 -- you must import Data.Graph
--- if you uncomment this exercise, comment exercise 1
+-- if you uncomment this exercise and exercise 8, comment exercise 1
 -- 
 -- evenEdges :: [(Vertex, Vertex)]
 -- evenEdges = [(n, n + 1) | n <- [0,2..998]]
@@ -135,3 +135,33 @@ incr2LR tree =
 -- decides whether there is a path between two given nodes in the graph defined above
 -- isReachable :: Int -> Int -> Bool
 -- isReachable n m = m `elem` reachable graph n
+
+-- exercise 8
+-- -- graph with the same properties as in exercise 7
+-- -- construct the graph but with cyclic dependecies
+
+-- data GGraph a = GNode a (GGraph a) deriving Show
+
+-- mkGraph :: [ (a, Int) ] -> [GGraph a]
+-- mkGraph table = table'
+--  where table' = map (\(x,n) -> GNode x (table'!!n)) table
+
+-- table :: [(Vertex, Vertex)]
+-- table = merge evenEdges oddEdges
+--   where merge (x:xs) ys = x : merge ys xs
+--         merge [] ys = ys
+
+-- graphCD :: [GGraph Vertex]
+-- graphCD = mkGraph table
+
+-- nextNode :: GGraph a -> GGraph a
+-- nextNode (GNode a g) = g
+
+-- nodeID :: GGraph a -> a
+-- nodeID (GNode v g) = v
+
+-- isReachableCD :: Int -> Int -> Bool
+-- isReachableCD n m = isReachableCD' n m []
+--   where isReachableCD' n m visited | n == m = True
+--         isReachableCD' n m visited | n `elem` visited = False 
+--         isReachableCD' n m visited | otherwise = isReachableCD' (nodeID $ nextNode (graphCD!!n)) m (n:visited)

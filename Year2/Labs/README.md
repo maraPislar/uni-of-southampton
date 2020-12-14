@@ -28,3 +28,11 @@ Example:
 > [[Add, Add, Mul], [Pop, Add Mul]]
 ```
 **Note!** A greedy algorithm won't deal with negative input. Therefore generating all solutions is the answer.
+
+## Sheet 5
+
+The aim of this exercise sheet is to explore the use of structured data for representing trees in Haskell including the use of Zippers and Functors. 
+
+## Sheet 6
+
+The aim of this exercise sheet is to gain skills in performing equational reasoning for Haskell programs and to understand the concepts of reduction, redex and lazy evaluation.

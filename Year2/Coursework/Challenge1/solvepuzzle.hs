@@ -37,7 +37,7 @@ isGood (i, j) n = i >= 0 && j >= 0 && j < n && j < n
 
 checkWord :: String -> WordSearchGrid -> Posn -> Posn -> Posn -> Maybe Placement
 checkWord [] _ (x, y) (_, _) (a, b) = Just ((y, x), decrypt (a, b))
-checkWord word grid (x,y) (i, j)(a, b)
+checkWord word grid (x,y) (i, j) (a, b)
     | isGood (i, j) (length grid) == False = Nothing
     | takeXthYth grid i j == head word = checkWord (tail word) grid (x,y) (i + a, j + b) (a, b)
     | otherwise = Nothing

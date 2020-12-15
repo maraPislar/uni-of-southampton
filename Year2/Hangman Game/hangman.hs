@@ -18,7 +18,7 @@ hangman =
         putStrLn "Try to guess it:"
 
         -- pass in the secret word and the letters guessed so far
-        play word ds
+        play word (length word) ds
 
 -- this method returns a computation of the input string
 -- it doesn'y echo the '-' character itserlf
@@ -35,20 +35,22 @@ secretGetLine =
         hSetEcho stdin True
         return xs
 
-play :: String -> String -> IO ()
-play word answerSoFar 
+play :: String -> Int -> String -> IO ()
+play word guesses answerSoFar 
     | answerSoFar == word = putStrLn "Correct!!"
+    | guesses == 0 = putStrLn "Too many guesses"
     | otherwise =
         do 
-            putStrLn "Enter a character:"
+            putStrLn "Enter a character: "
             guess <- getChar
             updatedAnswer <- putUpdate (updateMatch word answerSoFar guess)
-            play word updatedAnswer
+            play word (guesses - 1) updatedAnswer
 
 putUpdate :: String -> IO String
 putUpdate s = 
     do 
-        putStr "Your answer so far is : "
+        putStrLn ""
+        putStrLn "Your answer so far is : "
         putStrLn s
         return s
 

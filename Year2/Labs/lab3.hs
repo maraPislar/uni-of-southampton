@@ -4,6 +4,7 @@ module Exercises (evalInst,Instruction(..),Stack,SMProg) where
 
 import GHC.Generics (Generic,Generic1)
 import Control.DeepSeq
+import Data.List
 
 
 data Instruction = Add | Sub | Mul | Div | Dup | Pop deriving (Eq,Ord,Show,Generic)
@@ -116,9 +117,6 @@ evalPowerSequence stack (p:ps)
 createList :: Int -> [Instruction]
 createList l = replicate l Dup ++ replicate l Mul
 
-per :: Eq a => [a] -> [[a]]
-per xs = permutations xs
-
 prelucrate :: [[Instruction]] -> [[Instruction]]
 prelucrate [] = []
 prelucrate (x : xs)
@@ -140,4 +138,4 @@ isPossiblePower k l
     | l == k - 1 = True
     | l >= k = False
     | l < 0 = False
-    | otherwise = findSolution (prelucrate (per (createList l))) [Just 2] k
+    | otherwise = findSolution (prelucrate (permutations (createList l))) [Just 2] k

@@ -1,53 +1,54 @@
 import Parsing
 
--- Syntax:
--- 
--- MacroExpr ::= "def" MacroName "=" Expr "in" MacroExpr | Expr
--- Expr ::= Var | MacroName | Expr Expr | “\” Var “->” Expr | “(“ Expr “)”
--- MacroName ::= UChar | UChar MacroName
--- UChar ::= "A" | "B" | ... | "Z"
--- Var ::= “x” Digits
--- Digits ::= Digit | Digit Digits
--- Digit ::= “0” | “1” | “2” | “3” | “4” | “5” | “6” | “7” | “8” | “9”
-
 data LamMacroExpr = LamDef [ (String , LamExpr) ] LamExpr deriving (Eq,Show,Read)
 data LamExpr = LamMacro String | LamApp LamExpr LamExpr 
     | LamAbs Int LamExpr | LamVar Int deriving (Eq, Show, Read)
 
--- macroExpr :: Parser LamMacroExpr
--- macroExpr = 
---     do 
---         string "def"
---         macroName
---         string "="
---         expr
---         string "in"
---         macroExpr
---     <|> 
---         expr
-
 expr :: Parser LamExpr
-expr = 
+expr =
+    parseLamApp <|> parseLamAbs <|> parseLamVar <|> parseMacro
+
+parseLamApp :: Parser LamExpr
+parseLamApp = do
+    e1 <- rmBrackets <|> parseLamVar
+    space
+    e2 <- rmBrackets <|> parseLamVar
+    space
+    ex <- many expr
+    formatAppExpr e1 e2 ex
+
+formatAppExpr :: LamExpr -> LamExpr -> [LamExpr] -> Parser LamExpr
+formatAppExpr e1 e2 ex
+    | null ex = return (LamApp e1 e2)
+    | otherwise = return (LamApp (LamApp e1 e2) (head ex))
+
+parseLamAbs :: Parser LamExpr
+parseLamAbs = do
+    symbol "\\"
+    v <- var
+    string " -> "
+    LamAbs v <$> expr
+
+parseLamVar :: Parser LamExpr
+parseLamVar = do LamVar <$> var
+
+parseMacro :: Parser LamExpr
+parseMacro = do LamMacro <$> macroName
+
+rmBrackets :: Parser LamExpr
+rmBrackets = do
+    space
+    char '('
+    e <- expr
+    char ')'
+    space
+    return e
+
+var :: Parser Int
+var = 
     do
-        LamVar <$> var
-    <|>
-        LamMacro <$> macroName
-    <|>
-        do 
-            e1 <- expr
-            LamApp e1 <$> expr
-    <|>
-        do
-            string "\\"
-            v <- var
-            string "->"
-            LamAbs v <$> expr
-    <|>
-        do
-            char '('
-            e <- expr
-            char ')'
-            return e
+        char 'x'
+        nat
 
 macroName :: Parser String
 macroName =
@@ -57,11 +58,18 @@ macroName =
     <|>
         some upper
 
-var :: Parser Int
-var = 
+formPair :: Parser (String, LamExpr)
+formPair =
     do
-        char 'x'
-        nat
+        string "def "
+        mn <- macroName
+        string " = "
+        e <- expr
+        string " in "
+        return (mn, e)
 
-parseLamMacro :: String -> Maybe LamMacroExpr
-parseLamMacro _ = Nothing 
+parseLamMacro :: String -> LamMacroExpr
+parseLamMacro s = LamDef macros ex
+    where
+        (macros, e) = head (parse (many formPair) s)
+        (ex, _) = head (parse expr e)

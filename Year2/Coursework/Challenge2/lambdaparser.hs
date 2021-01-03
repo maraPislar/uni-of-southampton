@@ -10,9 +10,9 @@ expr =
 
 parseLamApp :: Parser LamExpr
 parseLamApp = do
-    e1 <- rmBrackets <|> parseLamVar
+    e1 <- rmBrackets <|> parseLamVar <|> parseMacro
     space
-    e2 <- rmBrackets <|> parseLamVar
+    e2 <- rmBrackets <|> parseLamVar <|> parseMacro
     space
     ex <- many expr
     formatAppExpr e1 e2 ex
@@ -65,11 +65,40 @@ formPair =
         mn <- macroName
         string " = "
         e <- expr
-        string " in "
+        space
+        string "in"
+        space
         return (mn, e)
 
-parseLamMacro :: String -> LamMacroExpr
-parseLamMacro s = LamDef macros ex
+alreadyVisited :: String -> [String] -> Bool
+alreadyVisited s [] = False 
+alreadyVisited s (x:xs)
+    | s == x = True 
+    | otherwise = alreadyVisited s xs
+
+hasDuplicates :: [(String, LamExpr)] -> [String] -> Bool
+hasDuplicates [] _ = False 
+hasDuplicates ((x, y):xs) visited
+    | alreadyVisited x visited = True
+    | otherwise = hasDuplicates xs (x : visited)
+
+isClosed :: Int -> LamExpr -> Bool
+isClosed a (LamAbs x e) = isClosed x e
+isClosed a (LamApp e1 e2) = isClosed a e1 && isClosed a e2
+isClosed a (LamVar x) = a == x
+
+closed :: [(String, LamExpr)] -> Bool
+closed [] = True 
+closed ((x, y):macros)
+    | isClosed (-1) y = closed macros
+    | otherwise = False 
+
+parseLamMacro :: String -> Maybe LamMacroExpr
+parseLamMacro "" = Nothing
+parseLamMacro s
+    | null (parse expr e) = Nothing
+    | rest == "" && not (hasDuplicates macros []) && closed macros = Just (LamDef macros ex)
+    | otherwise = Nothing
     where
         (macros, e) = head (parse (many formPair) s)
-        (ex, _) = head (parse expr e)
+        (ex, rest) = head (parse expr e)

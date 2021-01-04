@@ -6,9 +6,29 @@ data LamExpr = LamMacro String | LamApp LamExpr LamExpr
     | LamAbs Int LamExpr | LamVar Int deriving (Eq, Show, Read)
 
 -- examples
+
+-- def F = \x1 -> x1 in def G = \x1 -> (\x1 -> x1) x2 in \x1 -> G x3
 expr1 :: LamMacroExpr
 expr1 = LamDef [("F", LamAbs 1 (LamVar 1)), ("G", LamAbs 1 (LamApp (LamAbs 1 (LamVar 1)) (LamVar 2)))] 
     (LamAbs 1 (LamApp (LamAbs 1 (LamApp (LamAbs 1 (LamVar 1)) (LamVar 2))) (LamVar 3)))
+
+-- (\x1 -> x1 x1) \x2 -> x2
+expr2 :: LamMacroExpr
+expr2 = LamDef [] (LamApp (LamAbs 1 (LamApp (LamVar 1) (LamVar 1))) (LamAbs 2 (LamVar 2)))
+
+-- \x1 -> x1 x1
+expr3 :: LamMacroExpr
+expr3 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 1)))
+
+-- def G = λx -> λy -> x in def F = λx -> λy -> y in λx -> λy -> G (F y x) y
+expr4 :: LamMacroExpr
+expr4 = LamDef [("G", LamAbs 1 (LamAbs 2 (LamVar 1))), ("F", LamAbs 1 (LamAbs 2 (LamVar 2)))] 
+    (LamAbs 1 (LamAbs 2 (LamApp (LamMacro "G") (LamApp (LamApp (LamMacro "F") (LamApp (LamVar 2) (LamVar 1))) (LamVar 2)))))
+
+-- def G = λx -> λy -> x in def F = λx -> λy -> y in λx -> λy -> G (F y x) y
+expr5 :: LamMacroExpr
+expr5 = LamDef [("G", LamAbs 1 (LamAbs 2 (LamVar 1))), ("F", LamAbs 1 (LamAbs 2 (LamVar 2)))] 
+    (LamAbs 1 (LamAbs 2 (LamApp (LamAbs 1 (LamAbs 2 (LamVar 1))) (LamApp (LamApp (LamAbs 1 (LamAbs 2 (LamVar 2))) (LamApp (LamVar 2) (LamVar 1))) (LamVar 2)))))
 
 -- prettu print a lambda expression with macros
 prettyPrint :: LamMacroExpr -> String 
@@ -17,7 +37,7 @@ prettyPrint (LamDef xs lam)
     | null xs = printExpr lam
     -- if the list of macros is not empty, print all the formulas for 
     -- macros and and replace them in the formula accordingly
-    | otherwise = printFormulas xs ++ replace (createList xs xs) (printExpr lam)
+    | otherwise = printFormulas xs ++ replace (updateMacros xs xs) (printExpr lam)
 
 -- pretty print any lambda expression
 printExpr :: LamExpr -> String 
@@ -26,6 +46,9 @@ printExpr (LamAbs n e) = "\\x" ++ show n ++ " -> " ++ printExpr e
 printExpr (LamMacro s) = s
 -- parenthesis must be put in such a way that they are not redundant
 printExpr (LamApp (LamAbs a b) (LamAbs x (LamApp y z)) ) = "(" ++ printExpr (LamAbs a b) ++ ") " ++ "(" ++ printExpr (LamAbs x (LamApp y z)) ++ ")"
+printExpr (LamApp (LamApp a b) (LamApp x y)) = "(" ++ printExpr (LamApp a b) ++ ")" ++ " (" ++ printExpr (LamApp x y) ++ ")"
+printExpr (LamApp (LamApp a b) e) = "(" ++ printExpr (LamApp a b) ++ ") " ++ printExpr e
+-- printExpr (LamApp e (LamApp x y)) = printExpr e ++ " (" ++ printExpr (LamApp x y) ++ ")"
 printExpr (LamApp e1 (LamAbs x (LamApp y z))) = printExpr e1 ++ " " ++ "(" ++ printExpr (LamAbs x (LamApp y z)) ++ ")"
 printExpr (LamApp (LamAbs x y) e2) = "(" ++ printExpr (LamAbs x y) ++ ") " ++ printExpr e2
 printExpr (LamApp e1 e2) = printExpr e1 ++ " " ++ printExpr e2
@@ -37,11 +60,11 @@ printFormulas ((s, lam):list) = "def " ++ s ++ " = " ++ printExpr lam ++ " in " 
 
 -- update the list of macros with their corresponding lambda exprsion that don't appear in any other macro
 -- from the initial list
-createList :: [(String, LamExpr)] -> [(String, LamExpr)] -> [(String, LamExpr)]
-createList [] _ = []
-createList ((m, lam):ms) macros
-    | overlaps (m, lam) macros = createList ms macros
-    | otherwise = (m, lam) : createList ms macros
+updateMacros :: [(String, LamExpr)] -> [(String, LamExpr)] -> [(String, LamExpr)]
+updateMacros [] _ = []
+updateMacros ((m, lam):ms) macros
+    | overlaps (m, lam) macros = updateMacros ms macros
+    | otherwise = (m, lam) : updateMacros ms macros
 
 -- helper function for the above function that checks if a given macro overlaps any other macro from the given list
 overlaps :: (String, LamExpr) -> [ (String , LamExpr) ] -> Bool

@@ -54,20 +54,25 @@ transformExpr (LamApp e1 e2) visited =
         arg <- transformExpr e2 (k : f : e : (k + 1) : (f + 1) : (e + 1) : visited)
         return (LamAbs k (LamApp func (LamAbs f (LamApp arg (LamAbs e (LamApp (LamApp (LamVar f) (LamVar e)) (LamVar k)))))))
 
-convertMacros :: [(String, LamExpr)] -> [Int] -> [(String, LamExpr)]
-convertMacros [] _ = []
-convertMacros ((x, y):macros) visited = (x, converted) : convertMacros macros visited
+convertMacros :: [(String, LamExpr)] -> [(String, LamExpr)] -> [Int] -> [(String, LamExpr)]
+convertMacros [] _ _ = []
+convertMacros ((x, y):macros) acc visited = (x, converted) : convertMacros macros accMacros visitedM
     where
         Just converted = transformExpr y visited
+        accMacros = (x, converted) : acc
+        visitedM = visitedInMacros accMacros
 
 cpsTransform :: LamMacroExpr -> LamMacroExpr
 cpsTransform (LamDef macros e)
     | null macros = LamDef [] x
-    | otherwise = LamDef (convertMacros macros (visitedMacros ++ visitedInExpression)) x
+    | otherwise = LamDef convertedMacros y
     where
         Just x = transformExpr e visitedInExpression
+        Just y = transformExpr e (visitedConverted ++ visitedInExpression)
         visitedInExpression = visitedList e
         visitedMacros = visitedInMacros macros
+        visitedConverted = visitedInMacros convertedMacros
+        convertedMacros = convertMacros macros macros (visitedMacros ++ visitedInExpression)
 
 -- Examples in the instructions
 exId = LamAbs 1 (LamVar 1)

@@ -4,27 +4,32 @@ data LamMacroExpr = LamDef [ (String , LamExpr) ] LamExpr deriving (Eq,Show,Read
 data LamExpr = LamMacro String | LamApp LamExpr LamExpr 
     | LamAbs Int LamExpr | LamVar Int deriving (Eq, Show, Read)
 
+-- get a list of all the ints that have been used into an expression
 visitedList :: LamExpr -> [Int]
 visitedList (LamMacro x) = []
 visitedList (LamVar x) = [x]
 visitedList (LamAbs x e) = x : visitedList e
 visitedList (LamApp e1 e2) = visitedList e1 ++ visitedList e2
 
+-- get a list of all the ints that have been used in the macro definitions
 visitedInMacros :: [(String, LamExpr)] -> [Int]
 visitedInMacros [] = []
 visitedInMacros ((x, y):macros) = visitedList y ++ visitedInMacros macros
 
-alreadyVisited :: Int -> [Int] -> Bool
+alreadyVisited :: Eq a => a -> [a] -> Bool
 alreadyVisited s [] = False 
 alreadyVisited s (x:xs)
     | s == x = True 
     | otherwise = alreadyVisited s xs
 
+-- find an int that hasn't yet been used in the expressions
 checkForVar :: Int -> [Int] -> Int
 checkForVar a xs
     | alreadyVisited a xs = checkForVar (a + 1) xs
     | otherwise = a
 
+-- convert a single expression into CPS
+-- always add the ints used to the visited list to keep track of the names used
 transformExpr :: LamExpr -> [Int] -> Maybe LamExpr
 -- var
 transformExpr (LamVar x) visited =
@@ -54,6 +59,8 @@ transformExpr (LamApp e1 e2) visited =
         arg <- transformExpr e2 (k : f : e : (k + 1) : (f + 1) : (e + 1) : visited)
         return (LamAbs k (LamApp func (LamAbs f (LamApp arg (LamAbs e (LamApp (LamApp (LamVar f) (LamVar e)) (LamVar k)))))))
 
+-- convert the macros into CPS
+-- keep track of the ints that have been used as names before
 convertMacros :: [(String, LamExpr)] -> [(String, LamExpr)] -> [Int] -> [(String, LamExpr)]
 convertMacros [] _ _ = []
 convertMacros ((x, y):macros) acc visited = (x, converted) : convertMacros macros accMacros visitedM
@@ -62,6 +69,8 @@ convertMacros ((x, y):macros) acc visited = (x, converted) : convertMacros macro
         accMacros = (x, converted) : acc
         visitedM = visitedInMacros accMacros
 
+-- transform a Lambda Macro Expression using CPS
+-- update the visited list as you make the converssions
 cpsTransform :: LamMacroExpr -> LamMacroExpr
 cpsTransform (LamDef macros e)
     | null macros = LamDef [] x

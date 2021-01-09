@@ -51,6 +51,46 @@ ex3'7 = LamDef [] (LamApp (LamAbs 1 (LamApp (LamVar 1) (LamVar 1))) (LamAbs 2 (L
 ex3'8 :: LamMacroExpr
 ex3'8 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 1)))
 
+
+-- examples to test for challenge 4
+ex4'1 :: [Char]
+ex4'1 = "x1 (x2 x3)"
+ex4'2 :: [Char]
+ex4'2 = "x1 x2 F"
+ex4'3 :: [Char]
+ex4'3 = "def F = \\x1 -> x1 in \\x2 -> x2 F"
+ex4'4 :: [Char]
+ex4'4 = "def F = \\x1 -> x1 (def G = \\x1 -> x1 in x1) in \\x2 -> x2"
+ex4'5 :: [Char]
+ex4'5 = "def F = \\x1 -> x1 in def F = \\x2 -> x2 x1 in x1"
+ex4'6 :: [Char]
+ex4'6 = "def F = x1 in F"
+ex4'7 :: [Char]
+ex4'7 = "def F = \\x1 -> x1 in \\x1 -> F G"
+ex4'8 :: [Char]
+ex4'8 = "def F = \\x1 -> x2 in F"
+ex4'9 :: [Char]
+ex4'9 = "def F = \\x1 -> x1 in \\x1 -> F g"
+ex4'10 :: [Char]
+ex4'10 = "\\x1 -> \\x2 -> \\x3 -> x1 x2 x3"
+ex4'11 :: [Char]
+ex4'11 = "\\x1 -> x1 x2"
+ex4'12 :: [Char]
+ex4'12 = ""
+ex4'13 :: [Char]
+ex4'13 = "\\x1 -> (\\x2 -> x3 (\\x4 -> x5)) x6"
+
+-- examples to test for challenge 5
+exId =  (LamAbs 1 (LamVar 1))
+ex5'1 = LamDef [] (LamApp (LamVar 1) (LamVar 2))
+ex5'2 = (LamDef [ ("F", exId) ] (LamVar 2) )
+ex5'3 = (LamDef [ ("F", exId) ] (LamMacro "F") )
+ex5'4 = (LamDef [ ("F", exId) ] (LamApp (LamMacro "F") (LamMacro "F")))
+ex5'5 = LamDef [] exId
+ex5'6 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2)))
+ex5'7 = LamDef [] (LamApp (LamAbs 1 (LamVar 1)) (LamAbs 2 (LamVar 3)))
+ex5'8 = LamDef [("F", LamAbs 1 (LamApp (LamVar 1) (LamVar 2))), ("G", exId)] (LamApp (LamMacro "F") (LamMacro "G"))
+
 -- Test Suites, one per exercise
 tests :: [(String, [(String, Bool)])]
 tests = 
@@ -75,15 +115,15 @@ tests =
       ),
       (
         "Test 5: check empty list of words",
-        solveWordSearch [""] exGrid1'1 == error "Empty string is not a word"
+        solveWordSearch [""] exGrid1'1 == [("", Nothing)]
       ),
       (
         "Test 6: check grid is empty",
-        solveWordSearch exWords1'4 [] == error "The grid is not well formed"
+        null (solveWordSearch exWords1'4 [])
       ),
       (
         "Test 7: check grid is not of type n x n",
-        solveWordSearch exWords1'4 exGrid1'5 == error "The grid is not well formed"
+        null (solveWordSearch exWords1'4 exGrid1'5)
       )
     ]
   ),
@@ -94,20 +134,20 @@ tests =
     [
       (
         "Test 1: check pretty printing a lambda application",
-        prettyPrint ex3'1 == "(\\x1 -> x1) \\x1 -> x1"
+        prettyPrint ex3'1 == "(\\x1 -> x1) (\\x1 -> x1)"
       ),
       (
         "Test 2: check pretty printing a lambda application",
-        prettyPrint ex3'7 == "(\\x1 -> x1 x1) \\x2 -> x2"
-      )
+        prettyPrint ex3'7 == "(\\x1 -> x1 x1) (\\x2 -> x2)"
+      ),
       (
         "Test 3: check pretty printing a lambda abstraction",
-        prettyPrint ex3'2 == "\\x1 -> x1 \\x1 -> x1"
+        prettyPrint ex3'2 == "\\x1 -> x1 (\\x1 -> x1)"
       ),
       (
         "Test 4: check pretty printing a lambda abstraction",
         prettyPrint ex3'8 == "\\x1 -> x1 x1"
-      )
+      ),
       (
         "Test 5: check pretty printing with macro definitions",
         prettyPrint ex3'3 == "def F = \\x1 -> x1 in \\x2 -> x2 F" -- okay
@@ -118,19 +158,105 @@ tests =
       ),
       (
         "Test 7: check pretty printing with macro overlapping another macro",
-        prettyPrint ex3'6 == "def F = \\x1 -> x1 in def G = \\x1 -> (\\x1 -> x1) x2 in \x1 -> G x3"
+        prettyPrint ex3'6 == "def F = \\x1 -> x1 in def G = \\x1 -> (\\x1 -> x1) x2 in \\x1 -> G x3"
       ),
       (
         "Test 8: check pretty printing with nested macros",
-        prettyPrint ex3'5 == "def G = \\x1 -> \\x2 -> x1 in def F = \\x1 -> \\x2 -> x2 in \\x1 -> \\x2 -> G (F x2 x1) x2" -- okay
+        prettyPrint ex3'5 == "def G = \\x1 -> \\x2 -> x1 in def F = \\x1 -> \\x2 -> x2 in \\x1 -> \\x2 -> G (F (x2 x1) x2)" -- okay
       )
     ]
   ), 
   ("Challenge 4",
-    []
+    [
+      (
+        "Test 1: parse nested lambda application with parenthesis",
+        parseLamMacro ex4'1 == Just (LamDef [] (LamApp (LamVar 1) (LamApp (LamVar 2) (LamVar 3))))
+      ),
+      (
+        "Test 2: parse simple lambda aaplication",
+        parseLamMacro ex4'2 == Just (LamDef [] (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamMacro "F")))
+      ),
+      (
+        "Test 3: parse definitions of macros and expressions",
+        parseLamMacro ex4'3 == Just (LamDef [("F",LamAbs 1 (LamVar 1))] (LamAbs 2 (LamApp (LamVar 2) (LamMacro "F"))))
+      ),
+      (
+        "Test 4: parse lambda macro that is not in grammar",
+        parseLamMacro ex4'4 == Nothing 
+      ),
+      (
+        "Test 5: parse lambda macro expression with repeted macro definitions",
+        parseLamMacro  ex4'5 == Nothing
+      ),
+      (
+        "Test 6: parse lambda expression with unclosed macros",
+        parseLamMacro ex4'6 == Nothing
+      ),
+      (
+        "Test 7: parse lambda expression with undefined macro",
+        parseLamMacro ex4'7 == Just (LamDef [("F",LamAbs 1 (LamVar 1))] (LamAbs 1 (LamApp (LamMacro "F") (LamMacro "G"))))
+      ),
+      (
+        "Test 8: parse lambda expression with unclosed macro",
+        parseLamMacro ex4'8 == Nothing
+      ),
+      (
+        "Test 9: parse lambda expression with unparsed rest of expression",
+        parseLamMacro ex4'9 == Nothing
+      ),
+      (
+        "Test 10: parse lambda expression with nested abstractions",
+        parseLamMacro ex4'10 == Just (LamDef [] (LamAbs 1 (LamAbs 2 (LamAbs 3 (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamVar 3))))))
+      ),
+      (
+        "Test 11: parse lambda expression with lambda abstraction and application",
+        parseLamMacro ex4'11 == Just (LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2))))
+      ),
+      (
+        "Test 12: parse empty string",
+        parseLamMacro ex4'12 == Nothing
+      ),
+      (
+        "Test 13: parse lambda expression with multiple parenthesis",
+        parseLamMacro ex4'13 == Just (LamDef [] (LamAbs 1 (LamApp (LamAbs 2 (LamApp (LamVar 3) (LamAbs 4 (LamVar 5)))) (LamVar 6))))
+      )
+    ]
   ), 
   ("Challenge 5",
-    []
+    [
+      (
+        "Test 1: cps in a lambda application",
+        cpsTransform ex5'1 == LamDef [] (LamAbs 0 (LamApp (LamAbs 5 (LamApp (LamVar 5) (LamVar 1))) (LamAbs 3 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamVar 2))) (LamAbs 4 (LamApp (LamApp (LamVar 3) (LamVar 4)) (LamVar 0)))))))
+      ),
+      (
+        "Test 2: cps in a lambda abstraction",
+        cpsTransform ex5'5 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))
+      ),
+      (
+        "Test 3: cps in a lambda abstraction with application",
+        cpsTransform ex5'6 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamVar 1))) (LamAbs 4 (LamApp (LamAbs 7 (LamApp (LamVar 7) (LamVar 2))) (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 3))))))))))
+      ),
+      (
+        "Test 4: cps in a lambda application with abstractions",
+        cpsTransform ex5'7 == LamDef [] (LamAbs 0 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamAbs 1 (LamAbs 7 (LamApp (LamVar 7) (LamVar 1)))))) (LamAbs 4 (LamApp (LamAbs 7 (LamApp (LamVar 7) (LamAbs 2 (LamAbs 8 (LamApp (LamVar 8) (LamVar 3)))))) (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 0)))))))
+      ),
+      (
+        "Test 5: cps with macro definition",
+        cpsTransform ex5'2 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp (LamVar 3) (LamVar 1))))))] (LamAbs 4 (LamApp (LamVar 4) (LamVar 2)))
+      ),
+      (
+        "Test 6: cps with macro definition in expression",
+        cpsTransform ex5'3 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))] (LamMacro "F")
+      ),
+      (
+        "Test 7: cps with macros and application between macro",
+        cpsTransform ex5'4 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))] (LamAbs 3 (LamApp (LamMacro "F") (LamAbs 4 (LamApp (LamMacro "F") (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 3)))))))
+      ),
+      (
+        "Test 8: cps with simple abstraction",
+        cpsTransform ex5'5 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))
+      )
+    ]
   ) 
   ]
 
@@ -168,57 +294,3 @@ message ts =
   let failures = [(s,b) | (s,b) <- ts , b == False] in
   if failures == [] then "all test cases passed"
   else "failed " ++ (show (length failures)) ++ " out of " ++ (show (length ts)) ++ " test cases"
-
-
--- lambda calculus expressions test values 
-lambdaExpr1 = LamApp (LamAbs 1 (LamVar 1)) (LamAbs 1 (LamVar 1))
-lambdaExpr2 = LamApp (LamAbs 1 (LamAbs 2 (LamVar 1))) (LamApp (LamAbs 3 (LamVar 3)) (LamAbs 4 (LamVar 4)))
-lambdaExpr3 = LamApp lambdaExpr2 lambdaExpr1
-lambdaExpr4 = LamApp lambdaExpr1 lambdaExpr2
-lambdaExpr5 = (LamApp (LamAbs 1 (LamAbs 2 (LamVar 1))) (LamVar 3))
-lambdaExpr6 = LamApp lambdaExpr5 (LamApp (LamAbs 4 (LamVar 4)) (LamVar 5)) 
--- Smullyan's mockingbird(s)
-lambdaOmega = LamAbs 1 (LamApp (LamVar 1) (LamVar 1))
-lambdaOmega1 = LamApp lambdaOmega lambdaOmega
--- lambda calculus propositional logic constants and functions
-lambdaTrue = LamAbs 1 (LamAbs 2 (LamVar 1))
-lambdaFalse = LamAbs 1 (LamAbs 2 (LamVar 2))
-lambdaAnd = LamAbs 1 (LamAbs 2 (LamApp (LamApp (LamVar 2) (LamVar 1)) (LamVar 2)))
-lambdaAnd1 = LamApp (LamApp lambdaAnd lambdaFalse) lambdaFalse
-lambdaAnd2 = LamApp (LamApp lambdaAnd lambdaTrue) lambdaTrue
--- test cases for the church numerals
-lambdaZero = LamAbs 1 (LamAbs 2 (LamVar 2))
-lambdaSucc = LamAbs 1 (LamAbs 2 (LamAbs 3 (LamApp (LamVar 2) (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamVar 3)))))
-lambdaOne = LamAbs 1 (LamAbs 2 (LamApp (LamVar 1) (LamVar 2)))
-lambdaSuccZero = LamApp lambdaSucc lambdaZero
-
--- test for equivalent lambda expressions
-equivLam :: LamExpr -> LamExpr -> Bool
--- may need to be replaced by some more sophisticated test
--- such as checking for alpha equivalence
-equivLam m n = m == n
-
--- test for equivalent lambda expressions where the first may be Nothing
-equivLam2 :: Maybe LamExpr -> LamExpr -> Bool
--- may need to be replaced by some more sophisticated test
--- such as checking for beta equivalence
-equivLam2 Nothing n = False
-equivLam2 (Just m) n = m == n
-
--- test for two let strings being equivalent
-equivLetString :: String -> String -> Bool
--- at present just check string equality modulo extra spaces
--- may need to be replaced by some more sophisticated test
-equivLetString s t = remSpaces(s) == remSpaces(t)
-
--- test for two let expressions being equivalent, where the first may be Nothing
--- may need to be replaced by some more sophisticated test
-equivLet :: Maybe Expr -> Expr -> Bool
-equivLet Nothing e = False
-equivLet (Just d) e = d == e
-
--- removed duplicated spaces
-remSpaces :: String -> String
-remSpaces "" = ""
-remSpaces (' ':' ':s) = remSpaces (' ':s)
-remSpaces (c:s) = c:(remSpaces s)

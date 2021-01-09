@@ -97,7 +97,7 @@ findDirection word grid (i, j) (d:dx)
 -- find where an individual word can be by checking all positions on the board
 solveForWord :: String -> WordSearchGrid -> Int -> Maybe Placement
 solveForWord word grid counter
-    | word == "" = error "Empty string is not a word"
+    | word == "" = Nothing
     | counter >= n * n = Nothing
     | findDirection word grid (i, j) directions == Nothing = solveForWord word grid (counter + 1)
     | otherwise = findDirection word grid (i, j) directions
@@ -118,37 +118,8 @@ checkGrid len (line:grid)
 -- solve the board for each word on the board
 solveWordSearch :: [String] -> WordSearchGrid -> [(String, Maybe Placement)]
 solveWordSearch words grid 
-    | not (checkGrid (length grid) grid) = error "The grid is not well formed"
+    | not (checkGrid (length grid) grid) = []
     | otherwise = [(word, solveForWord word grid 0) | word <- words ]
-
-exGrid1'1 :: [[Char]]
-exGrid1'1 = [ "HAGNIRTSH" , "SACAGETAK", "GCSTACKEL","MGHKMILKI","EKNLETGCN","TNIRTLETE","IRAAHCLSR","MAMROSAGD","GIZKDDNRG" ] 
-exWords1'1 :: [[Char]]
-exWords1'1 = [ "HASKELL","STRING","STACK","MAIN","METHOD"]
-
-exGrid1'2 :: [[Char]]
-exGrid1'2 = ["ROBREUMBR","AURPEPSAN","UNLALMSEE","YGAUNPYYP","NLMNBGENA","NBLEALEOR","ALRYPBBLG","NREPBEBEP","YGAYAROMR"]
-exWords1'2 :: [[Char]]
-exWords1'2 = [ "BANANA", "ORANGE", "MELON", "RASPBERRY","APPLE","PLUM","GRAPE" ]
-
-exGrid1'3 :: [[Char]]
-exGrid1'3 = ["WVERTICALL", "ROOAFFLSAB", "ACRILIATOA", "NDODKONWDC", "DRKESOODDK", "OEEPZEGLIW", "MSIIHOAERA", "ALRKRRIRER", "KODIDEDRCD", "HELWSLEUTH"]
-exWords1'3 :: [[Char]]
-exWords1'3 = ["Seek", "Find", "Random", "Sleuth", "Backward", "Vertical", "Diagonal", "WIKIPEDIA", "HORIZONTAL", "WORDSEARCH"]
-
-exGrid1'4 :: [[Char]]
-exGrid1'4 = [   "EBNREDOR",
-                "DEGEUODR",
-                "OICDEHOG",
-                "CKBFORUR",
-                "EOKUKCGR",
-                "DOBDGHHG",
-                "CCEGBFOH",
-                "KFDERDOF"]
-exWords1'4 :: [[Char]]
-exWords1'4 = ["CODE", "COOKIE", "GREEN", "BUG", "FUDGE", "DOUGH", "DOG"]
-
-exGrid1'5 = ["WERFDGS", "SFDGASD", "SFGDTSR", "SFGDTS", "SFHDYA", "SFTDGSJ", "DFSGAJS"]
 
 -- Challenge 2 --
 
@@ -179,21 +150,8 @@ prettyPrint (LamDef xs lam)
     -- macros and and replace them in the formula accordingly
     | otherwise = printFormulas xs ++ replace (updateMacros xs xs) (printExpr lam)
 
--- pretty print any lambda expression
--- printExpr :: LamExpr -> String 
--- printExpr (LamVar n) = "x" ++ show n
--- printExpr (LamAbs n e) = "\\x" ++ show n ++ " -> " ++ printExpr e
--- printExpr (LamMacro s) = s
--- -- parenthesis must be put in such a way that they are not redundant
--- printExpr (LamApp (LamAbs a b) (LamAbs x (LamApp y z)) ) = "(" ++ printExpr (LamAbs a b) ++ ") " ++ "(" ++ printExpr (LamAbs x (LamApp y z)) ++ ")"
--- printExpr (LamApp (LamApp a b) (LamApp x y)) = "(" ++ printExpr (LamApp a b) ++ ")" ++ " (" ++ printExpr (LamApp x y) ++ ")"
--- printExpr (LamApp (LamApp a b) e) = "(" ++ printExpr (LamApp a b) ++ ") " ++ printExpr e
--- -- printExpr (LamApp e (LamApp x y)) = printExpr e ++ " (" ++ printExpr (LamApp x y) ++ ")"
--- printExpr (LamApp e1 (LamAbs x (LamApp y z))) = printExpr e1 ++ " " ++ "(" ++ printExpr (LamAbs x (LamApp y z)) ++ ")"
--- printExpr (LamApp (LamAbs x y) e2) = "(" ++ printExpr (LamAbs x y) ++ ") " ++ printExpr e2
--- printExpr (LamApp e1 e2) = printExpr e1 ++ " " ++ printExpr e2
-
-
+-- pretty print a single expression and respect the parenthesis
+-- the resulted string will parse to the same syntax tree
 printExpr :: LamExpr -> String
 printExpr e
     | (LamAbs x e1) <- e = "\\x" ++ show x ++ " -> " ++ printExpr e1
@@ -201,6 +159,7 @@ printExpr e
     | (LamVar x) <- e       = "x" ++ show x
     | (LamMacro x) <- e     = x
 
+-- create a pretty print by adding parenthesis when needed so the expresion will parse to the same tree
 putParenthesis :: LamExpr -> String
 putParenthesis e
     | (LamApp e1@(LamApp _ _) e2@(LamApp _ _)) <- e = putParenthesis e1 ++ " (" ++ putParenthesis e2 ++ ")"
@@ -221,7 +180,6 @@ putParenthesis e
     | (LamApp e1@(LamAbs _ _) e2@(LamMacro _)) <- e = "(" ++ printExpr e1 ++ ") " ++ putParenthesis e2
     | (LamVar x)                               <- e = "x" ++ show x
     | (LamMacro x)                             <- e = x
-
 
 -- prints all macros at the beginning of the pretty printed string
 printFormulas :: [(String, LamExpr)] -> String
@@ -262,26 +220,6 @@ replace ((macro, sub):macros) lam
         Just start = substringPosition (printExpr sub) lam
         expr = printExpr sub
         newLambda = take (start - 1) lam ++ macro ++ drop (start + length expr + 1) lam
-
--- examples in the instructions
-ex3'1 :: LamMacroExpr
-ex3'1 = LamDef [] (LamApp (LamAbs 1 (LamVar 1)) (LamAbs 1 (LamVar 1)))
-ex3'2 :: LamMacroExpr
-ex3'2 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamAbs 1 (LamVar 1))))
-ex3'3 :: LamMacroExpr
-ex3'3 = LamDef [ ("F", LamAbs 1 (LamVar 1) ) ] (LamAbs 2 (LamApp (LamVar 2) (LamMacro "F")))
-ex3'4 :: LamMacroExpr
-ex3'4 = LamDef [ ("F", LamAbs 1 (LamVar 1) ) ] (LamAbs 2 (LamApp (LamAbs 1 (LamVar 1)) (LamVar 2))) 
-ex3'5 :: LamMacroExpr
-ex3'5 = LamDef [("G", LamAbs 1 (LamAbs 2 (LamVar 1))), ("F", LamAbs 1 (LamAbs 2 (LamVar 2)))] 
-    (LamAbs 1 (LamAbs 2 (LamApp (LamAbs 1 (LamAbs 2 (LamVar 1))) (LamApp (LamApp (LamAbs 1 (LamAbs 2 (LamVar 2))) (LamApp (LamVar 2) (LamVar 1))) (LamVar 2)))))
-ex3'6 :: LamMacroExpr
-ex3'6 = LamDef [("F", LamAbs 1 (LamVar 1)), ("G", LamAbs 1 (LamApp (LamAbs 1 (LamVar 1)) (LamVar 2)))] 
-    (LamAbs 1 (LamApp (LamAbs 1 (LamApp (LamAbs 1 (LamVar 1)) (LamVar 2))) (LamVar 3)))
-ex3'7 :: LamMacroExpr
-ex3'7 = LamDef [] (LamApp (LamAbs 1 (LamApp (LamVar 1) (LamVar 1))) (LamAbs 2 (LamVar 2)))
-ex3'8 :: LamMacroExpr
-ex3'8 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 1)))
 
 -- Challenge 4 --
 
@@ -408,7 +346,6 @@ parseLamMacro s
         -- get the expression restulted after parsing the macros
         (ex, rest) = head (parse expr e)
 
-
 -- Challenge 5
 
 -- get a list of all the ints that have been used into an expression
@@ -484,14 +421,6 @@ cpsTransform (LamDef macros e)
         visitedConverted = visitedInMacros convertedMacros
         convertedMacros = convertMacros macros macros (visitedMacros ++ visitedInExpression)
 
--- Examples in the instructions
-exId =  (LamAbs 1 (LamVar 1))
-ex5'1 = (LamApp (LamVar 1) (LamVar 2))
-ex5'2 = (LamDef [ ("F", exId) ] (LamVar 2) )
-ex5'3 = (LamDef [ ("F", exId) ] (LamMacro "F") )
-ex5'4 = (LamDef [ ("F", exId) ] (LamApp (LamMacro "F") (LamMacro "F")))
-
-
 -- Challenge 6
 
 innerRedn1 :: LamMacroExpr -> Maybe LamMacroExpr
@@ -504,6 +433,9 @@ compareInnerOuter :: LamMacroExpr -> Int -> (Maybe Int,Maybe Int,Maybe Int,Maybe
 compareInnerOuter _ _ = (Nothing,Nothing,Nothing,Nothing) 
 
 -- Examples in the instructions
+
+exId :: LamExpr
+exId =  LamAbs 1 (LamVar 1)
 
 -- (\x1 -> x1 x2)
 ex6'1 :: LamMacroExpr

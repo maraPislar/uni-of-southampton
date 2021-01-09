@@ -30,7 +30,7 @@ expr5 :: LamMacroExpr
 expr5 = LamDef [("G", LamAbs 1 (LamAbs 2 (LamVar 1))), ("F", LamAbs 1 (LamAbs 2 (LamVar 2)))] 
     (LamAbs 1 (LamAbs 2 (LamApp (LamAbs 1 (LamAbs 2 (LamVar 1))) (LamApp (LamApp (LamAbs 1 (LamAbs 2 (LamVar 2))) (LamApp (LamVar 2) (LamVar 1))) (LamVar 2)))))
 
--- prettu print a lambda expression with macros
+-- pretty print a lambda expression with macros
 prettyPrint :: LamMacroExpr -> String 
 prettyPrint (LamDef xs lam)
     -- if the list of macros is empty, simply evaluate the lambda expresion

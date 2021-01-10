@@ -27,19 +27,14 @@ encrypt o | o == Forward = (0,1)
 
 -- Challenge 2: create a puzzle
 
-getRandomPosition :: Int -> IO Posn
-getRandomPosition len =
-    do 
-        ri <- randomRIO (0, len - 1)
-        rj <- randomRIO (0, len - 1)
-
-        return (ri, rj)
-
-getRandomDirection :: IO Orientation
-getRandomDirection =
+addWord :: String -> WordSearchGrid -> IO WordSearchGrid
+addWord word grid =
     do
-        pos <- randomRIO (0, 7)
-        return (directions !! pos)
+        ((i, j), dir) <- getRandomPlacement (length grid)
+        if isSafe (length word) (length grid) (i, j) dir && canFit word grid (i, j) dir
+            then return (updateGrid word grid (i, j) dir)
+        else
+            addWord word grid
 
 isSafe :: Int -> Int -> Posn -> Orientation -> Bool
 isSafe wordLen gridLen (i, j) Forward       = j + wordLen <= gridLen
@@ -63,52 +58,20 @@ updateGrid :: String -> [[Char]] -> Posn -> Orientation -> [[Char]]
 updateGrid [] grid _ _ = grid
 updateGrid (w:word) grid (i, j) dir = updateGrid word newGrid (i + x, j + y) dir
     where
-        newGrid = writeInGrid w grid 0 (i, j)
+        newGrid = writeOneChar w grid 0 (i, j)
         (x, y) = encrypt dir
 
-writeInGrid :: Char -> [[Char]] -> Int -> Posn -> [[Char]]
-writeInGrid _ [] _ _ = []
-writeInGrid w (row:grid) counter (i, j)
-    | counter == i = insertAt w j row : writeInGrid w grid (counter + 1) (i, j)
-    | otherwise = row : writeInGrid w grid (counter + 1) (i , j)
+writeOneChar :: Char -> [[Char]] -> Int -> Posn -> [[Char]]
+writeOneChar _ [] _ _ = []
+writeOneChar w (row:grid) counter (i, j)
+    | counter == i = insertAt w j row : writeOneChar w grid (counter + 1) (i, j)
+    | otherwise = row : writeOneChar w grid (counter + 1) (i , j)
 
 insertAt :: a -> Int -> [a] -> [a]
 insertAt newElement _ [] = [newElement]
 insertAt newElement i (a:as)
   | i <= 0 = newElement:as
   | otherwise = a : insertAt newElement (i - 1) as
-    
-generateRandom :: Int -> IO Placement
-generateRandom len =
-    do
-        pos <- getRandomPosition len
-        dir <- getRandomDirection
-        return (pos, dir)
-
-addWord :: String -> WordSearchGrid -> IO WordSearchGrid
-addWord word grid =
-    do
-        ((i, j), dir) <- generateRandom (length grid)
-        if isSafe (length word) (length grid) (i, j) dir && canFit word grid (i, j) dir
-            then return (updateGrid word grid (i, j) dir)
-        else
-            addWord word grid
-
-sizeofGrid :: [String] -> Double -> Int
-sizeofGrid xs d = round (sqrt (fromIntegral numberOfHiddenChars / d))
-    where
-        numberOfHiddenChars = foldr ((+) . length) 0 xs
-
-createWordSearch :: [ String ] -> Double -> IO WordSearchGrid
-createWordSearch words density =
-    do
-        let grid = replicate size (replicate size '-')
-        foldM (flip addWord) grid words
-    where
-        size = sizeofGrid words density
-
-addWords :: [String] -> WordSearchGrid -> IO WordSearchGrid
-addWords words grid = foldM (flip addWord) grid words
 
 getRandomChar :: [String] -> IO Char
 getRandomChar words =
@@ -117,6 +80,27 @@ getRandomChar words =
         let word = words !! randomPos
         randomCh <- randomRIO (0, length word - 1)
         return (word !! randomCh)
+
+getRandomPosition :: Int -> IO Posn
+getRandomPosition len =
+    do 
+        ri <- randomRIO (0, len - 1)
+        rj <- randomRIO (0, len - 1)
+
+        return (ri, rj)
+
+getRandomDirection :: IO Orientation
+getRandomDirection =
+    do
+        pos <- randomRIO (0, 7)
+        return (directions !! pos)
+
+getRandomPlacement :: Int -> IO Placement
+getRandomPlacement len =
+    do
+        pos <- getRandomPosition len
+        dir <- getRandomDirection
+        return (pos, dir)
 
 fillGrid :: [String] -> WordSearchGrid -> WordSearchGrid -> IO WordSearchGrid
 fillGrid _ [] acc = return acc
@@ -134,3 +118,13 @@ fillRow (w:row) acc words =
             then fillRow row (acc ++ [ch]) words
         else
             fillRow row (acc ++ [w]) words
+
+createWordSearch :: [ String ] -> Double -> IO WordSearchGrid
+createWordSearch words density =
+    do
+        let grid = replicate size (replicate size '-')
+        newGrid <- foldM (flip addWord) grid words
+        fillGrid words newGrid []
+    where
+        numberOfHiddenChars = foldr ((+) . length) 0 words
+        size = round (sqrt (fromIntegral numberOfHiddenChars / density))

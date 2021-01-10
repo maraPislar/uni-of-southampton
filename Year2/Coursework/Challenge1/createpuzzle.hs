@@ -42,7 +42,7 @@ isSafe wordLen gridLen (i, j) Back          = j - wordLen >= -1
 isSafe wordLen gridLen (i, j) Up            = i - wordLen >= -1
 isSafe wordLen gridLen (i, j) Down          = i + wordLen <= gridLen
 isSafe wordLen gridLen (i, j) UpForward     = i - wordLen >= -1 && j + wordLen <= gridLen
-isSafe wordLen gridLen (i, j) UpBack        = i - wordLen >= -1 && i - wordLen >= -1
+isSafe wordLen gridLen (i, j) UpBack        = i - wordLen >= -1 && j - wordLen >= -1
 isSafe wordLen gridLen (i, j) DownForward   = i + wordLen <= gridLen && j + wordLen <= gridLen
 isSafe wordLen gridLen (i, j) DownBack      = i + wordLen <= gridLen && j - wordLen >= -1
 

@@ -142,8 +142,16 @@ tests =
         createAndSolve ["WORD"] 0.001
       ),
       (
-        "Test 4: create word search with even lower density",
-        createAndSolve ["WORD"] 0.0001
+        "Test 4: create word search with many words",
+        createAndSolve ["WORD", "VANILLA", "CHOCOLATE", "MAYO", "WELLDONE", "HELLO", "WORLD", "WISH", "ENCYCLOPEDIA"] 0.1
+      ),
+      (
+        "Test 5: create word search with no words",
+        createAndSolve [] 0.1
+      ),
+      (
+        "Test 6: create word search with high density",
+        createAndSolve ["HELLO", "HOW", "ARE", "YOU", "TODAY", "TELL", "ME"] 0.7
       )
     ]
   ), 

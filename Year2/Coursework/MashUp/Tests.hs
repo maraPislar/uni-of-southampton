@@ -92,77 +92,94 @@ ex5'7 = LamDef [] (LamApp (LamAbs 1 (LamVar 1)) (LamAbs 2 (LamVar 3)))
 ex5'8 = LamDef [("F", LamAbs 1 (LamApp (LamVar 1) (LamVar 2))), ("G", exId)] (LamApp (LamMacro "F") (LamMacro "G"))
 
 -- Test Suites, one per exercise
-tests :: [(String, [(String, Bool)])]
+tests :: [(String, [(String, IO Bool)])]
 tests = 
   [ 
   ("Challenge 1",
     [ 
       (
         "Test 1: check first 9 x 9 grid", 
-        solveWordSearch exWords1'1 exGrid1'1 == sol1'1
+        return (solveWordSearch exWords1'1 exGrid1'1 == sol1'1)
       ),
       (
         "Test 2: check second 9 x 9 grid",
-        solveWordSearch exWords1'2 exGrid1'2 == sol1'2
+        return (solveWordSearch exWords1'2 exGrid1'2 == sol1'2)
       ),
       (
         "Test 3: check third 10 x 10 grid",
-        solveWordSearch exWords1'3 exGrid1'3 == sol1'3
+        return (solveWordSearch exWords1'3 exGrid1'3 == sol1'3)
       ),
       (
         "Test 4: check fourth 8 x 8 grid",
-        solveWordSearch exWords1'4 exGrid1'4 == sol1'4
+        return (solveWordSearch exWords1'4 exGrid1'4 == sol1'4)
       ),
       (
         "Test 5: check empty list of words",
-        solveWordSearch [""] exGrid1'1 == [("", Nothing)]
+        return (solveWordSearch [""] exGrid1'1 == [("", Nothing)])
       ),
       (
         "Test 6: check grid is empty",
-        null (solveWordSearch exWords1'4 [])
+        return (null (solveWordSearch exWords1'4 []))
       ),
       (
         "Test 7: check grid is not of type n x n",
-        null (solveWordSearch exWords1'4 exGrid1'5)
+        return (null (solveWordSearch exWords1'4 exGrid1'5))
       )
     ]
   ),
   ("Challenge 2",
-    []
+    [
+      (
+        "Test 1: create a word search puzzle with few words and low density",
+        createAndSolve ["WORD"] 0.3
+      ),
+      (
+        "Test 2: create word puzzle with more words and large density",
+        createAndSolve ["WORD", "MALL", "CALL", "USED"] 0.7
+      ),
+      (
+        "Test 3: create word search with one word and low density",
+        createAndSolve ["WORD"] 0.001
+      ),
+      (
+        "Test 4: create word search with even lower density",
+        createAndSolve ["WORD"] 0.0001
+      )
+    ]
   ), 
   ("Challenge 3",
     [
       (
         "Test 1: check pretty printing a lambda application",
-        prettyPrint ex3'1 == "(\\x1 -> x1) (\\x1 -> x1)"
+        return (prettyPrint ex3'1 == "(\\x1 -> x1) (\\x1 -> x1)")
       ),
       (
         "Test 2: check pretty printing a lambda application",
-        prettyPrint ex3'7 == "(\\x1 -> x1 x1) (\\x2 -> x2)"
+        return (prettyPrint ex3'7 == "(\\x1 -> x1 x1) (\\x2 -> x2)")
       ),
       (
         "Test 3: check pretty printing a lambda abstraction",
-        prettyPrint ex3'2 == "\\x1 -> x1 (\\x1 -> x1)"
+        return (prettyPrint ex3'2 == "\\x1 -> x1 (\\x1 -> x1)")
       ),
       (
         "Test 4: check pretty printing a lambda abstraction",
-        prettyPrint ex3'8 == "\\x1 -> x1 x1"
+        return (prettyPrint ex3'8 == "\\x1 -> x1 x1")
       ),
       (
         "Test 5: check pretty printing with macro definitions",
-        prettyPrint ex3'3 == "def F = \\x1 -> x1 in \\x2 -> x2 F" -- okay
+        return (prettyPrint ex3'3 == "def F = \\x1 -> x1 in \\x2 -> x2 F")
       ),
       (
         "Test 6: check pretty printing with macro defined but not in the expression",
-        prettyPrint ex3'4 == "def F = \\x1 -> x1 in \\x2 -> F x2"
+        return (prettyPrint ex3'4 == "def F = \\x1 -> x1 in \\x2 -> F x2")
       ),
       (
         "Test 7: check pretty printing with macro overlapping another macro",
-        prettyPrint ex3'6 == "def F = \\x1 -> x1 in def G = \\x1 -> (\\x1 -> x1) x2 in \\x1 -> G x3"
+        return (prettyPrint ex3'6 == "def F = \\x1 -> x1 in def G = \\x1 -> (\\x1 -> x1) x2 in \\x1 -> G x3")
       ),
       (
         "Test 8: check pretty printing with nested macros",
-        prettyPrint ex3'5 == "def G = \\x1 -> \\x2 -> x1 in def F = \\x1 -> \\x2 -> x2 in \\x1 -> \\x2 -> G (F (x2 x1) x2)" -- okay
+        return (prettyPrint ex3'5 == "def G = \\x1 -> \\x2 -> x1 in def F = \\x1 -> \\x2 -> x2 in \\x1 -> \\x2 -> G (F (x2 x1) x2)")
       )
     ]
   ), 
@@ -170,55 +187,55 @@ tests =
     [
       (
         "Test 1: parse nested lambda application with parenthesis",
-        parseLamMacro ex4'1 == Just (LamDef [] (LamApp (LamVar 1) (LamApp (LamVar 2) (LamVar 3))))
+        return (parseLamMacro ex4'1 == Just (LamDef [] (LamApp (LamVar 1) (LamApp (LamVar 2) (LamVar 3)))))
       ),
       (
         "Test 2: parse simple lambda aaplication",
-        parseLamMacro ex4'2 == Just (LamDef [] (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamMacro "F")))
+        return (parseLamMacro ex4'2 == Just (LamDef [] (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamMacro "F"))))
       ),
       (
         "Test 3: parse definitions of macros and expressions",
-        parseLamMacro ex4'3 == Just (LamDef [("F",LamAbs 1 (LamVar 1))] (LamAbs 2 (LamApp (LamVar 2) (LamMacro "F"))))
+        return (parseLamMacro ex4'3 == Just (LamDef [("F",LamAbs 1 (LamVar 1))] (LamAbs 2 (LamApp (LamVar 2) (LamMacro "F")))))
       ),
       (
         "Test 4: parse lambda macro that is not in grammar",
-        parseLamMacro ex4'4 == Nothing 
+        return (parseLamMacro ex4'4 == Nothing)
       ),
       (
         "Test 5: parse lambda macro expression with repeted macro definitions",
-        parseLamMacro  ex4'5 == Nothing
+        return (parseLamMacro  ex4'5 == Nothing)
       ),
       (
         "Test 6: parse lambda expression with unclosed macros",
-        parseLamMacro ex4'6 == Nothing
+        return (parseLamMacro ex4'6 == Nothing)
       ),
       (
         "Test 7: parse lambda expression with undefined macro",
-        parseLamMacro ex4'7 == Just (LamDef [("F",LamAbs 1 (LamVar 1))] (LamAbs 1 (LamApp (LamMacro "F") (LamMacro "G"))))
+        return (parseLamMacro ex4'7 == Just (LamDef [("F",LamAbs 1 (LamVar 1))] (LamAbs 1 (LamApp (LamMacro "F") (LamMacro "G")))))
       ),
       (
         "Test 8: parse lambda expression with unclosed macro",
-        parseLamMacro ex4'8 == Nothing
+        return (parseLamMacro ex4'8 == Nothing)
       ),
       (
         "Test 9: parse lambda expression with unparsed rest of expression",
-        parseLamMacro ex4'9 == Nothing
+        return (parseLamMacro ex4'9 == Nothing)
       ),
       (
         "Test 10: parse lambda expression with nested abstractions",
-        parseLamMacro ex4'10 == Just (LamDef [] (LamAbs 1 (LamAbs 2 (LamAbs 3 (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamVar 3))))))
+        return (parseLamMacro ex4'10 == Just (LamDef [] (LamAbs 1 (LamAbs 2 (LamAbs 3 (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamVar 3)))))))
       ),
       (
         "Test 11: parse lambda expression with lambda abstraction and application",
-        parseLamMacro ex4'11 == Just (LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2))))
+        return (parseLamMacro ex4'11 == Just (LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2)))))
       ),
       (
         "Test 12: parse empty string",
-        parseLamMacro ex4'12 == Nothing
+        return (parseLamMacro ex4'12 == Nothing)
       ),
       (
         "Test 13: parse lambda expression with multiple parenthesis",
-        parseLamMacro ex4'13 == Just (LamDef [] (LamAbs 1 (LamApp (LamAbs 2 (LamApp (LamVar 3) (LamAbs 4 (LamVar 5)))) (LamVar 6))))
+        return (parseLamMacro ex4'13 == Just (LamDef [] (LamAbs 1 (LamApp (LamAbs 2 (LamApp (LamVar 3) (LamAbs 4 (LamVar 5)))) (LamVar 6)))))
       )
     ]
   ), 
@@ -226,37 +243,40 @@ tests =
     [
       (
         "Test 1: cps in a lambda application",
-        cpsTransform ex5'1 == LamDef [] (LamAbs 0 (LamApp (LamAbs 5 (LamApp (LamVar 5) (LamVar 1))) (LamAbs 3 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamVar 2))) (LamAbs 4 (LamApp (LamApp (LamVar 3) (LamVar 4)) (LamVar 0)))))))
+        return (cpsTransform ex5'1 == LamDef [] (LamAbs 0 (LamApp (LamAbs 5 (LamApp (LamVar 5) (LamVar 1))) (LamAbs 3 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamVar 2))) (LamAbs 4 (LamApp (LamApp (LamVar 3) (LamVar 4)) (LamVar 0))))))))
       ),
       (
         "Test 2: cps in a lambda abstraction",
-        cpsTransform ex5'5 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))
+        return (cpsTransform ex5'5 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1)))))))
       ),
       (
         "Test 3: cps in a lambda abstraction with application",
-        cpsTransform ex5'6 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamVar 1))) (LamAbs 4 (LamApp (LamAbs 7 (LamApp (LamVar 7) (LamVar 2))) (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 3))))))))))
+        return (cpsTransform ex5'6 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamVar 1))) (LamAbs 4 (LamApp (LamAbs 7 (LamApp (LamVar 7) (LamVar 2))) (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 3)))))))))))
       ),
       (
         "Test 4: cps in a lambda application with abstractions",
-        cpsTransform ex5'7 == LamDef [] (LamAbs 0 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamAbs 1 (LamAbs 7 (LamApp (LamVar 7) (LamVar 1)))))) (LamAbs 4 (LamApp (LamAbs 7 (LamApp (LamVar 7) (LamAbs 2 (LamAbs 8 (LamApp (LamVar 8) (LamVar 3)))))) (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 0)))))))
+        return (cpsTransform ex5'7 == LamDef [] (LamAbs 0 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamAbs 1 (LamAbs 7 (LamApp (LamVar 7) (LamVar 1)))))) (LamAbs 4 (LamApp (LamAbs 7 (LamApp (LamVar 7) (LamAbs 2 (LamAbs 8 (LamApp (LamVar 8) (LamVar 3)))))) (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 0))))))))
       ),
       (
         "Test 5: cps with macro definition",
-        cpsTransform ex5'2 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp (LamVar 3) (LamVar 1))))))] (LamAbs 4 (LamApp (LamVar 4) (LamVar 2)))
+        return (cpsTransform ex5'2 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp (LamVar 3) (LamVar 1))))))] (LamAbs 4 (LamApp (LamVar 4) (LamVar 2))))
       ),
       (
         "Test 6: cps with macro definition in expression",
-        cpsTransform ex5'3 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))] (LamMacro "F")
+        return (cpsTransform ex5'3 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))] (LamMacro "F"))
       ),
       (
         "Test 7: cps with macros and application between macro",
-        cpsTransform ex5'4 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))] (LamAbs 3 (LamApp (LamMacro "F") (LamAbs 4 (LamApp (LamMacro "F") (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 3)))))))
+        return (cpsTransform ex5'4 == LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))] (LamAbs 3 (LamApp (LamMacro "F") (LamAbs 4 (LamApp (LamMacro "F") (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 3))))))))
       ),
       (
         "Test 8: cps with simple abstraction",
-        cpsTransform ex5'5 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))
+        return (cpsTransform ex5'5 == LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 (LamApp (LamVar 2) (LamVar 1)))))))
       )
     ]
+  ),
+  ("Challenge 6",
+    []
   ) 
   ]
 
@@ -267,30 +287,52 @@ main =
     putStr ""
     testSuite tests
 
-testSuite :: [(String, [(String,Bool)])] -> IO ()
+testSuite :: [(String, [(String, IO Bool)])] -> IO ()
 testSuite [] = putStr ""
 testSuite ((s,tc):ts) =
   do
-    putStrLn (outPrefix (s ++ ": " ++ (message tc))) 
+    mes <- message tc 0
+    putStrLn (outPrefix (s ++ ": " ++ mes)) 
     testCases tc
     testSuite ts
 
-testCases :: [(String,Bool)] -> IO ()
+testCases :: [(String, IO Bool)] -> IO ()
 testCases [] = putStr ""
-testCases ((s,False):ts) =
+testCases ((s, b):ts) =
   do
-    putStr (outPrefix "Did not satisfy assertion: ")
-    putStrLn s 
-    testCases ts
-testCases ((s,True):ts) =
-  do
-    testCases ts
+    bo <- b
+    if bo then
+     testCases ts
+    else do
+     putStr (outPrefix "Did not satisfy assertion: ") 
+     putStrLn s 
+     testCases ts
+      
 
 -- Auxiliary functions to support testing and scoring
+outPrefix :: [Char] -> [Char]
 outPrefix msg = "  " ++ msg
 
-message :: [(String,Bool)] -> String
-message ts =
-  let failures = [(s,b) | (s,b) <- ts , b == False] in
-  if failures == [] then "all test cases passed"
-  else "failed " ++ (show (length failures)) ++ " out of " ++ (show (length ts)) ++ " test cases"
+message :: [(String,IO Bool)] -> Int -> IO String
+message [] count 
+  | count /= 0 = return ("failed " ++ show count)
+  | count == 0 = return "all test cases passed"
+
+message ((s, b):ts) count =
+  do
+    bo <- b
+    if not bo then
+      message ts (count + 1)
+    else
+      message ts count
+
+createAndSolve :: [ String ] -> Double -> IO Bool
+createAndSolve words maxDensity =   do g <- createWordSearch words maxDensity
+                                       let soln = solveWordSearch words g
+                                       return (checkWordsExist soln)
+
+checkWordsExist :: [(String, Maybe Placement)] -> Bool
+checkWordsExist [] = True
+checkWordsExist ((s, p):ps)
+  | p == Nothing = False 
+  | otherwise = checkWordsExist ps

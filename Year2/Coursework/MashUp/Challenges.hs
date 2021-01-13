@@ -49,6 +49,7 @@ directions :: [Orientation]
 directions = [Forward, Back, Up, Down, UpForward, UpBack, DownForward, DownBack]
 
 -- encrypt the direction in number of steps
+-- used to know the number of steps to make 
 encrypt :: Orientation -> Posn
 encrypt o | o == Forward = (0,1)
           | o == Back = (0,-1)
@@ -60,6 +61,7 @@ encrypt o | o == Forward = (0,1)
           | o == DownBack =(1,-1)  
 
 -- decrypt number of steps in direction
+-- used to know the direction depending on the number of steps
 decrypt :: Posn -> Orientation
 decrypt (i,j)
    | i == 0 && j == 1 = Forward
@@ -71,7 +73,7 @@ decrypt (i,j)
    | i == 1 && j == 1 = DownForward
    | i == 1 && j == -1 = DownBack
 
--- return a (i, j) element from a matrix
+-- return an element from a matrix at position (x, y)
 takeXthYth :: [[a]] -> Int -> Int -> a
 takeXthYth xs x y = ( xs !! x ) !! y
 
@@ -81,7 +83,10 @@ checkWord [] _ (x, y) (_, _) (a, b) = Just ((y, x), decrypt (a, b))
 checkWord word grid (x,y) (i, j) (a, b)
     -- check if position of element is within the board
     | not noBoard = Nothing
+    -- check if the first char of the word is the same as the one on the board
+    -- if yes => continue checking the rest of the chars of the word
     | takeXthYth grid i j == head word = checkWord (tail word) grid (x,y) (i + a, j + b) (a, b)
+    -- if there is no match => the word wasn't found
     | otherwise = Nothing
     where
         noBoard = i >= 0 && j >= 0 && i < n && j < n
@@ -89,22 +94,31 @@ checkWord word grid (x,y) (i, j) (a, b)
 
 -- find a direction on the grid where the word can continue
 findDirection :: String -> WordSearchGrid -> Posn -> [Orientation] -> Maybe Placement
+-- if there is no match with a direction => the word is not on that position
 findDirection _ _ _ [] = Nothing
 findDirection word grid (i, j) (d:dx)
-   | checkWord word grid (i, j) (i, j) (encrypt d) == Nothing = findDirection word grid (i, j) dx
-   | otherwise = checkWord word grid (i, j) (i, j) (encrypt d)
+    -- try each direction at a position in which the word can be checked
+   | matchWord == Nothing = findDirection word grid (i, j) dx
+   | otherwise = matchWord
+   where
+       matchWord = checkWord word grid (i, j) (i, j) (encrypt d)
 
 -- find where an individual word can be by checking all positions on the board
 solveForWord :: String -> WordSearchGrid -> Int -> Maybe Placement
 solveForWord word grid counter
     | word == "" = Nothing
+    -- if all positions are checked and none returned a Placement => 
+        -- the owrd is not on the board
     | counter >= n * n = Nothing
-    | findDirection word grid (i, j) directions == Nothing = solveForWord word grid (counter + 1)
-    | otherwise = findDirection word grid (i, j) directions
+    -- if no direction is found at that position, move to the next position
+    | matchDirection == Nothing = solveForWord word grid (counter + 1)
+    | otherwise = matchDirection
     where
         n = length grid
+        -- (i, j) position
         i = counter `div` n
         j = counter `mod` n
+        matchDirection = findDirection word grid (i, j) directions
 
 -- sanity check: check if the grid is of type n x n
 --               check if the grid is empty 
@@ -115,23 +129,49 @@ checkGrid len (line:grid)
     | len == length line = checkGrid len grid
     | otherwise = False
 
--- solve the board for each word on the board
+-- solve the board for each word in the given list
 solveWordSearch :: [String] -> WordSearchGrid -> [(String, Maybe Placement)]
 solveWordSearch words grid 
+    -- if any sanity check fails => return an empty grid 
     | not (checkGrid (length grid) grid) = []
-    | otherwise = [(word, solveForWord word grid 0) | word <- words ]
+    -- else, solve the puzzle for each word and return its placement if found
+    | otherwise = [(word, solveForWord word grid counter) | word <- words ]
+    where
+        counter = 0
 
 -- Challenge 2 --
 
+-- create a puzzle for the word search game
+-- parameters: a list of words to be hidden into the puzzle
+--             the density (to calculate the size of the board)
+createWordSearch :: [ String ] -> Double -> IO WordSearchGrid
+createWordSearch words density =
+    do
+        -- create a grid that only consists of dummy characters
+        let grid = replicate size (replicate size '-')
+        -- add the words to be found randomly in the board
+        newGrid <- foldM (flip addWord) grid words
+        -- fill the rest of the board with random chars
+        fillGrid words newGrid []
+    where
+        numberOfHiddenChars = foldr ((+) . length) 0 words
+        size = round (sqrt (fromIntegral numberOfHiddenChars / density))
+
+-- add one word to the board at a random position and direction
 addWord :: String -> WordSearchGrid -> IO WordSearchGrid
 addWord word grid =
     do
+        -- get a random position and direction
         ((i, j), dir) <- getRandomPlacement (length grid)
+        -- sanity check: check if the word fits at that random direction and position
         if isSafe (length word) (length grid) (i, j) dir && canFit word grid (i, j) dir
+            -- return the updateg board with that word written in it
             then return (updateGrid word grid (i, j) dir)
         else
+            -- recursive call to find another random position and direction to check
             addWord word grid
 
+-- sanity check: check if the length of a word fits into the board given a position and direction
 isSafe :: Int -> Int -> Posn -> Orientation -> Bool
 isSafe wordLen gridLen (i, j) Forward       = j + wordLen <= gridLen
 isSafe wordLen gridLen (i, j) Back          = j - wordLen >= -1
@@ -142,41 +182,52 @@ isSafe wordLen gridLen (i, j) UpBack        = i - wordLen >= -1 && j - wordLen >
 isSafe wordLen gridLen (i, j) DownForward   = i + wordLen <= gridLen && j + wordLen <= gridLen
 isSafe wordLen gridLen (i, j) DownBack      = i + wordLen <= gridLen && j - wordLen >= -1
 
+-- sanity check: check for collisions of a word in the board with another word
 canFit :: String -> [[Char]] -> Posn -> Orientation -> Bool
+-- return true if the checking got to the end of the word without any 'False' calls
 canFit [] _ _ _ = True
 canFit (w:word) grid (i, j) dir
+    -- accept only if the char on the board is the same as the char to add or if it's the dummy char
     | takeXthYth grid i j == w || takeXthYth grid i j == '-' = canFit word grid (i + x, j + y) dir
     | otherwise = False
     where
+        -- the funciton encrypt was created in challenge 1
         (x, y) = encrypt dir
 
+-- update the grid with a word that is safe to add and can fit into the board
 updateGrid :: String -> [[Char]] -> Posn -> Orientation -> [[Char]]
 updateGrid [] grid _ _ = grid
+-- add each char to the grid
 updateGrid (w:word) grid (i, j) dir = updateGrid word newGrid (i + x, j + y) dir
     where
         newGrid = writeOneChar w grid 0 (i, j)
+        -- the function encrypt was created in challenge 1
         (x, y) = encrypt dir
 
+-- add each char to the given pisition in the board
+-- concatenate the rest of the rows
 writeOneChar :: Char -> [[Char]] -> Int -> Posn -> [[Char]]
 writeOneChar _ [] _ _ = []
 writeOneChar w (row:grid) counter (i, j)
     | counter == i = insertAt w j row : writeOneChar w grid (counter + 1) (i, j)
     | otherwise = row : writeOneChar w grid (counter + 1) (i , j)
 
+-- insert one element at a given position into a list
 insertAt :: a -> Int -> [a] -> [a]
 insertAt newElement _ [] = [newElement]
 insertAt newElement i (a:as)
   | i <= 0 = newElement:as
   | otherwise = a : insertAt newElement (i - 1) as
 
-getRandomChar :: [String] -> IO Char
-getRandomChar words =
+-- generate a random placement 
+getRandomPlacement :: Int -> IO Placement
+getRandomPlacement len =
     do
-        randomPos <- randomRIO (0, length words - 1)
-        let word = words !! randomPos
-        randomCh <- randomRIO (0, length word - 1)
-        return (word !! randomCh)
+        pos <- getRandomPosition len
+        dir <- getRandomDirection
+        return (pos, dir)
 
+-- generate a random position within the board
 getRandomPosition :: Int -> IO Posn
 getRandomPosition len =
     do 
@@ -185,19 +236,14 @@ getRandomPosition len =
 
         return (ri, rj)
 
+-- generate a random direction between the 8 directions available
 getRandomDirection :: IO Orientation
 getRandomDirection =
     do
         pos <- randomRIO (0, 7)
         return (directions !! pos)
 
-getRandomPlacement :: Int -> IO Placement
-getRandomPlacement len =
-    do
-        pos <- getRandomPosition len
-        dir <- getRandomDirection
-        return (pos, dir)
-
+-- fill the grid with randomly chosen chars from the set of the given words
 fillGrid :: [String] -> WordSearchGrid -> WordSearchGrid -> IO WordSearchGrid
 fillGrid _ [] acc = return acc
 fillGrid words (row:grid) acc =
@@ -205,38 +251,34 @@ fillGrid words (row:grid) acc =
         newRow <- fillRow row [] words
         fillGrid words grid (acc ++ [newRow])
 
+-- fill the row with randomly chosen characters form the given set of words
 fillRow :: [Char] -> [Char] -> [String] -> IO [Char]
 fillRow [] acc _ = return acc
 fillRow (w:row) acc words =
     do
+        -- select a random char from the words
         ch <- getRandomChar words
+        -- replace the char in the row if it is a dummy node
         if w == '-'
+            -- replace the char with a random char
             then fillRow row (acc ++ [ch]) words
         else
+            -- recursive call to check for the rest of the chars
+            -- and to replace them 
             fillRow row (acc ++ [w]) words
 
-createWordSearch :: [ String ] -> Double -> IO WordSearchGrid
-createWordSearch words density =
+-- generate a random character from the given set of words
+getRandomChar :: [String] -> IO Char
+getRandomChar words =
     do
-        let grid = replicate size (replicate size '-')
-        newGrid <- foldM (flip addWord) grid words
-        fillGrid words newGrid []
-    where
-        numberOfHiddenChars = foldr ((+) . length) 0 words
-        size = round (sqrt (fromIntegral numberOfHiddenChars / density))
-
-
---- Convenience functions supplied for testing purposes
-createAndSolve :: [ String ] -> Double -> IO [ (String, Maybe Placement) ]
-createAndSolve words maxDensity =   do g <- createWordSearch words maxDensity
-                                       let soln = solveWordSearch words g
-                                       printGrid g
-                                       return soln
-
-printGrid :: WordSearchGrid -> IO ()
-printGrid [] = return ()
-printGrid (w:ws) = do putStrLn w
-                      printGrid ws
+        -- generate a random position within the length of the list
+        randomPos <- randomRIO (0, length words - 1)
+        -- select the word in the list based on the random position
+        let word = words !! randomPos
+        -- generate a random position within the length of the word selected
+        randomCh <- randomRIO (0, length word - 1)
+        -- return the character from the word at that random position
+        return (word !! randomCh)
 
 -- Challenge 3 --
 
@@ -298,52 +340,23 @@ updateExpr macros (LamApp e1 e2)
     | isMacro macros (LamApp e1 e2) = replace macros (LamApp e1 e2)
     | otherwise = LamApp (updateExpr macros e1) (updateExpr macros e2)
 
+-- check if a given lambda expression is a definition of a macro
 isMacro :: [(String, LamExpr)] -> LamExpr -> Bool
+-- if the list of the macros finished without any True calls => 
+-- there is no macro definition equal to that expression => False
 isMacro [] _ = False
 isMacro ((m, e):macros) lam
     | e == lam = True
     | otherwise = isMacro macros lam
 
+-- replace a lambda expression with the matching macro name
 replace :: [(String, LamExpr)] -> LamExpr -> LamExpr
+-- if the list of macros finished and no LamMacro call was made =>
+-- there is no macro matching and just return the pure lambda expression
 replace [] lam = lam
 replace ((m, e):macros) lam
     | e == lam = LamMacro m
     | otherwise = replace macros lam
-
--- -- update the list of macros with their corresponding lambda exprsion that don't appear in any other macro
--- -- from the initial list
--- updateMacros :: [(String, LamExpr)] -> [(String, LamExpr)] -> [(String, LamExpr)]
--- updateMacros [] _ = []
--- updateMacros ((m, lam):ms) macros
---     | overlaps (m, lam) macros = updateMacros ms macros
---     | otherwise = (m, lam) : updateMacros ms macros
-
--- -- helper function for the above function that checks if a given macro overlaps any other macro from the given list
--- overlaps :: (String, LamExpr) -> [ (String , LamExpr) ] -> Bool
--- overlaps (_,_) [] = False
--- overlaps (m1, lam1) ((m2, lam2):macros)
---     | m1 /= m2 && printExpr lam1 `isInfixOf` printExpr lam2 = True
---     | otherwise = overlaps (m1, lam1) macros
-
--- -- returns the position where a substring is found in another string
--- substringPosition :: String -> String -> Maybe Int
--- substringPosition _ []  = Nothing
--- substringPosition sub str =
---     if sub `isPrefixOf` str
---         then Just 0
---     else
---         (+1) <$> substringPosition sub (tail str)
-
--- -- replaces the macros in the lambda expresion
--- replace :: [(String, LamExpr)] -> String -> String
--- replace [] lam = lam
--- replace ((macro, sub):macros) lam
---     | isNothing (substringPosition expr lam) = replace macros lam
---     | otherwise = replace macros newLambda
---     where
---         Just start = substringPosition (printExpr sub) lam
---         expr = printExpr sub
---         newLambda = take (start - 1) lam ++ macro ++ drop (start + length expr + 1) lam
 
 -- Challenge 4 --
 
@@ -355,6 +368,7 @@ expr =
 -- parser for lambda application
 parseLamApp :: Parser LamExpr
 parseLamApp = do
+    -- remove brackets and get an expression OR parse a var OR parse a macro
     e1 <- rmBrackets <|> parseLamVar <|> parseMacro
     space
     e2 <- rmBrackets <|> parseLamVar <|> parseMacro
@@ -363,6 +377,7 @@ parseLamApp = do
     formatLamApp e1 e2 ex
 
 -- format the lambda application depending on how many applications there are
+-- if there are many lambda application => create nested lambda applications
 formatLamApp :: LamExpr -> LamExpr -> [LamExpr] -> Parser LamExpr
 formatLamApp e1 e2 ex
     | null ex = return (LamApp e1 e2)
@@ -423,7 +438,7 @@ formPair =
         space
         return (mn, e)
 
--- check is an element exista into a list
+-- check if an element exists into a list
 alreadyVisited :: Eq a => a -> [a] -> Bool
 alreadyVisited s [] = False 
 alreadyVisited s (x:xs)
@@ -485,18 +500,25 @@ visitedInMacros [] = []
 visitedInMacros ((x, y):macros) = visitedList y ++ visitedInMacros macros
 
 -- find an int that hasn't yet been used in the expressions
+-- a is a starting point
 checkForVar :: Int -> [Int] -> Int
 checkForVar a xs
     | alreadyVisited a xs = checkForVar (a + 1) xs
     | otherwise = a
 
+startPoint :: Int
+startPoint = 0
+
 -- convert a single expression into CPS
--- always add the ints used to the visited list to keep track of the names used
+-- always add the ints used in defining expressions
+-- to the visited list to keep track of the names used
+-- apply the rules of CPS depending on the lambda expression
 transformExpr :: LamExpr -> [Int] -> Maybe LamExpr
+
 -- var
 transformExpr (LamVar x) visited =
     do
-        let k = checkForVar 0 (x : visited)
+        let k = checkForVar startPoint (x : visited)
         return (LamAbs k (LamApp (LamVar k) (LamVar x)))
 
 -- macro
@@ -507,16 +529,16 @@ transformExpr (LamMacro x) visited =
 -- abs
 transformExpr (LamAbs x e) visited =
     do
-        let k = checkForVar 0 (x : visited)
+        let k = checkForVar startPoint (x : visited)
         body <- transformExpr e (k : x : visited)
         return (LamAbs k (LamApp (LamVar k) (LamAbs x body)))
 
 -- app
 transformExpr (LamApp e1 e2) visited = 
     do
-        let k = checkForVar 0 visited
-        let f = checkForVar 0 (k : visited)
-        let e = checkForVar 0 (f : k : visited)
+        let k = checkForVar startPoint visited
+        let f = checkForVar startPoint (k : visited)
+        let e = checkForVar startPoint (f : k : visited)
         func <- transformExpr e1 (k : f : e : visited)
         arg <- transformExpr e2 (k : f : e : (k + 1) : (f + 1) : (e + 1) : visited)
         return (LamAbs k (LamApp func (LamAbs f (LamApp arg (LamAbs e (LamApp (LamApp (LamVar f) (LamVar e)) (LamVar k)))))))
@@ -533,6 +555,8 @@ convertMacros ((x, y):macros) acc visited = (x, converted) : convertMacros macro
 
 -- transform a Lambda Macro Expression using CPS
 -- update the visited list as you make the converssions
+-- key idea: keep the names of the variables added unique as
+-- you update each expression
 cpsTransform :: LamMacroExpr -> LamMacroExpr
 cpsTransform (LamDef macros e)
     | null macros = LamDef [] x
@@ -547,6 +571,7 @@ cpsTransform (LamDef macros e)
 
 -- Challenge 6
 
+-- check if a variable was used before in a lambda expression
 free :: Int -> LamExpr -> Bool
 free x (LamVar y) = x == y
 free x (LamAbs y e) 
@@ -554,11 +579,13 @@ free x (LamAbs y e)
     | x /= y = free x e
 free x (LamApp e1 e2) = free x e1 || free x e2
 
+-- rename a variable with the next available name in a lambda expression
 rename :: Int -> LamExpr -> Int
 rename x e 
     | free (x + 1) e = rename (x + 1) e
     | otherwise = x + 1
 
+-- substitutes expression three for (free) variable two in the expression given as parameter 1
 subst :: LamExpr -> Int -> LamExpr -> LamExpr
 subst (LamVar x) y e 
     | x == y = e
@@ -570,12 +597,14 @@ subst (LamAbs x e1) y e
     | x == y = LamAbs x e1
 subst (LamApp e1 e2) y e = LamApp (subst e1 y e) (subst e2 y e)
 
+-- perform one outer reduction on a lambda expression
 oreduction :: LamExpr -> LamExpr
 oreduction (LamVar x) = LamVar x
 oreduction (LamAbs x e) = LamAbs x (oreduction e)
 oreduction (LamApp (LamAbs x e1) e2) = subst e1 x e2
 oreduction (LamApp e1 e2) = LamApp (oreduction e1) e2
 
+-- perform one inner reduction on a lambda expression
 ireduction :: LamExpr -> LamExpr
 ireduction (LamVar x) = LamVar x
 ireduction (LamAbs x e) = LamAbs x (ireduction e)
@@ -599,23 +628,27 @@ prelucrateExpr (LamVar x) macros = LamVar x
 prelucrateExpr (LamAbs x e) macros = LamAbs x (prelucrateExpr e macros)
 prelucrateExpr (LamApp e1 e2) macros = LamApp (prelucrateExpr e1 macros) (prelucrateExpr e2 macros)
 
--- reductions for a simple macro expression
+-- one inner reduction for a simple macro expression
 innerRedn1 :: LamMacroExpr -> Maybe LamMacroExpr
 innerRedn1 (LamDef macros e)= Just (LamDef macros (ireduction newExpr))
   where
     newExpr = prelucrateExpr e macros
 
+-- one outer reduction for a simple macro expression
 outerRedn1 :: LamMacroExpr -> Maybe LamMacroExpr
 outerRedn1 (LamDef macros e) = Just (LamDef macros (oreduction newExpr))
   where
     newExpr = prelucrateExpr e macros
 
+-- check if a lambda expression is a lambda application
 isApp :: LamExpr -> Bool
 isApp (LamApp e1 e2) = True
 isApp (LamAbs x e) = False
 isApp (LamVar x) = False
 isApp (LamMacro x) = False
 
+-- reduce a lambda macro expression depending on the function passed to it
+-- the bound represents the maximum number of reductions allowed
 reduceExpressions :: (LamMacroExpr -> Maybe LamMacroExpr) -> LamMacroExpr -> Int -> Int -> Maybe Int
 reduceExpressions reduce (LamDef macros e) bound step
    | step > bound = Nothing
@@ -625,51 +658,15 @@ reduceExpressions reduce (LamDef macros e) bound step
          Just (LamDef m currentReduction) = reduce (LamDef macros e)
          previousReduction = e
 
+identity :: LamExpr
+identity = LamAbs 100 (LamVar 100)
+
 compareInnerOuter :: LamMacroExpr -> Int -> ( Maybe Int, Maybe Int, Maybe Int, Maybe Int )
 compareInnerOuter expr bound = (inner, outer, innerCPS, outerCPS)
-   where inner = reduceExpressions innerRedn1 expr bound 0
-         outer = reduceExpressions outerRedn1 expr bound 0
-         innerCPS = reduceExpressions innerRedn1 expr bound 0 -- AICI TREBUIE APLICAT CPS INAINTE + IDENTITY
-         outerCPS = reduceExpressions outerRedn1 expr bound 0 -- AICI TREBUIE APLICAT CPS INAINTE + IDENTITY
-
--- BUGS TO FIX:
--- - "Nothing" is not returned when the reduction enters a loop
--- - CPS evaluations don't work properly
-
-ex1 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2)))
-ex1CPSIdentity = LamDef [] (LamApp (LamAbs 3 (LamApp (LamVar 3) (LamAbs 1 (LamAbs 6 (LamApp (LamAbs 4 (LamApp (LamVar 4) (LamVar 1))) (LamAbs 7 (LamApp (LamAbs 5 (LamApp (LamVar 5) (LamVar 2))) (LamAbs 8 (LamApp (LamApp (LamVar 7) (LamVar 8)) (LamVar 6)))))))))) (LamAbs 10 (LamVar 10)))
-
--- Examples in the instructions
-
-exId :: LamExpr
-exId =  LamAbs 1 (LamVar 1)
-
--- (\x1 -> x1 x2)
-ex6'1 :: LamMacroExpr
-ex6'1 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2)))
-
---  def F = \x1 -> x1 in F  
-ex6'2 :: LamMacroExpr
-ex6'2 = LamDef [ ("F",exId) ] (LamMacro "F")
-
---  (\x1 -> x1) (\x2 -> x2)   
-ex6'3 :: LamMacroExpr
-ex6'3 = LamDef [] ( LamApp exId (LamAbs 2 (LamVar 2)))
-
---  (\x1 -> x1 x1)(\x1 -> x1 x1)  
-wExp :: LamExpr
-wExp = (LamAbs 1 (LamApp (LamVar 1) (LamVar 1)))
-ex6'4 :: LamMacroExpr
-ex6'4 = LamDef [] (LamApp wExp wExp)
-
---  def ID = \x1 -> x1 in def FST = (\x1 -> λx2 -> x1) in FST x3 (ID x4) 
-ex6'5 :: LamMacroExpr
-ex6'5 = LamDef [ ("ID",exId) , ("FST",LamAbs 1 (LamAbs 2 (LamVar 1))) ] ( LamApp (LamApp (LamMacro "FST") (LamVar 3)) (LamApp (LamMacro "ID") (LamVar 4)))
-
---  def FST = (\x1 -> λx2 -> x1) in FST x3 ((\x1 ->x1) x4))   
-ex6'6 :: LamMacroExpr
-ex6'6 = LamDef [ ("FST", LamAbs 1 (LamAbs 2 (LamVar 1)) ) ]  ( LamApp (LamApp (LamMacro "FST") (LamVar 3)) (LamApp (exId) (LamVar 4)))
-
--- def ID = \x1 -> x1 in def SND = (\x1 -> λx2 -> x2) in SND ((\x1 -> x1 x1) (\x1 -> x1 x1)) ID
-ex6'7 :: LamMacroExpr
-ex6'7 = LamDef [ ("ID",exId) , ("SND",LamAbs 1 (LamAbs 2 (LamVar 2))) ]  (LamApp (LamApp (LamMacro "SND") (LamApp wExp wExp) ) (LamMacro "ID") ) 
+   where
+        (LamDef ms cpsExpr) = cpsTransform expr
+        cpsToCompare = LamDef ms (LamApp cpsExpr identity)
+        inner = reduceExpressions innerRedn1 expr bound 0
+        outer = reduceExpressions outerRedn1 expr bound 0
+        innerCPS = reduceExpressions innerRedn1 cpsToCompare bound 0
+        outerCPS = reduceExpressions outerRedn1 cpsToCompare bound 0

@@ -60,68 +60,101 @@ exWords2'4 = ["HELLO", "HOW", "ARE", "YOU", "TODAY", "TELL", "ME"]
 -- examples to test for challenge 3
 ex3'1 :: LamMacroExpr
 ex3'1 = LamDef [] (LamApp (LamAbs 1 (LamVar 1)) (LamAbs 1 (LamVar 1)))
+sol3'1 :: [Char]
+sol3'1 = "(\\x1 -> x1) (\\x1 -> x1)"
 ex3'2 :: LamMacroExpr
 ex3'2 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamAbs 1 (LamVar 1))))
+sol3'2 :: [Char]
+sol3'2 = "\\x1 -> x1 (\\x1 -> x1)"
 ex3'3 :: LamMacroExpr
 ex3'3 = LamDef [ ("F", LamAbs 1 (LamVar 1) ) ] (LamAbs 2 (LamApp (LamVar 2) (LamMacro "F")))
+sol3'3 :: [Char]
+sol3'3 = "def F = \\x1 -> x1 in \\x2 -> x2 F"
 ex3'4 :: LamMacroExpr
 ex3'4 = LamDef [ ("F", LamAbs 1 (LamVar 1) ) ] (LamAbs 2 (LamApp (LamAbs 1 (LamVar 1)) (LamVar 2))) 
+sol3'4 :: [Char]
+sol3'4 = "def F = \\x1 -> x1 in \\x2 -> F x2"
 ex3'5 :: LamMacroExpr
 ex3'5 = LamDef [("G", LamAbs 1 (LamAbs 2 (LamVar 1))), ("F", LamAbs 1 (LamAbs 2 (LamVar 2)))] 
         (LamAbs 1 (LamAbs 2 (LamApp (LamAbs 1 (LamAbs 2 (LamVar 1))) (LamApp (LamApp (LamAbs 1 
         (LamAbs 2 (LamVar 2))) (LamApp (LamVar 2) (LamVar 1))) (LamVar 2)))))
+sol3'5 :: [Char]
+sol3'5 = "def G = \\x1 -> \\x2 -> x1 in def F = \\x1 -> \\x2 -> x2 in \\x1 -> \\x2 -> G (F (x2 x1) x2)"
 ex3'6 :: LamMacroExpr
 ex3'6 = LamDef [("F", LamAbs 1 (LamVar 1)), ("G", LamAbs 1 (LamApp (LamAbs 1 (LamVar 1)) (LamVar 2)))] 
         (LamAbs 1 (LamApp (LamAbs 1 (LamApp (LamAbs 1 (LamVar 1)) (LamVar 2))) (LamVar 3)))
+sol3'6 :: [Char]
+sol3'6 = "def F = \\x1 -> x1 in def G = \\x1 -> (\\x1 -> x1) x2 in \\x1 -> G x3"
 ex3'7 :: LamMacroExpr
 ex3'7 = LamDef [] (LamApp (LamAbs 1 (LamApp (LamVar 1) (LamVar 1))) (LamAbs 2 (LamVar 2)))
+sol3'7 :: [Char]
+sol3'7 = "(\\x1 -> x1 x1) (\\x2 -> x2)"
 ex3'8 :: LamMacroExpr
 ex3'8 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 1)))
+sol3'8 :: [Char]
+sol3'8 = "\\x1 -> x1 x1"
 ex3'9 :: LamMacroExpr
 ex3'9 = LamDef [("F", LamVar 5), ("G", LamApp (LamVar 5) (LamVar 2))] 
         (LamAbs 5 (LamApp (LamApp (LamVar 5) (LamVar 2)) (LamVar 5)))
-ex3'40 :: LamMacroExpr
-ex3'40 = LamDef [("F", LamVar 5)] (LamAbs 5 (LamApp (LamVar 5) (LamApp (LamVar 5) (LamVar 5))))
+sol3'9 :: [Char]
+sol3'9 = "def F = x5 in def G = x5 x2 in \\x5 -> G F"
+ex3'10 :: LamMacroExpr
+ex3'10 = LamDef [("F", LamVar 5)] (LamAbs 5 (LamApp (LamVar 5) (LamApp (LamVar 5) (LamVar 5))))
+sol3'10 :: [Char]
+sol3'10 = "def F = x5 in \\x5 -> F (F F)"
 
 -- examples to test for challenge 4
 ex4'1 :: [Char]
 ex4'1 = "x1 (x2 x3)"
+sol4'1 :: Maybe LamMacroExpr
 sol4'1 = Just (LamDef [] (LamApp (LamVar 1) (LamApp (LamVar 2) (LamVar 3))))
 ex4'2 :: [Char]
 ex4'2 = "x1 x2 F"
+sol4'2 :: Maybe LamMacroExpr
 sol4'2 = Just (LamDef [] (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamMacro "F")))
 ex4'3 :: [Char]
 ex4'3 = "def F = \\x1 -> x1 in \\x2 -> x2 F"
+sol4'3 :: Maybe LamMacroExpr
 sol4'3 = Just (LamDef [("F",LamAbs 1 (LamVar 1))] (LamAbs 2 (LamApp (LamVar 2) (LamMacro "F"))))
 ex4'4 :: [Char]
 ex4'4 = "def F = \\x1 -> x1 (def G = \\x1 -> x1 in x1) in \\x2 -> x2"
+sol4'4 :: Maybe a
 sol4'4 = Nothing
 ex4'5 :: [Char]
 ex4'5 = "def F = \\x1 -> x1 in def F = \\x2 -> x2 x1 in x1"
+sol4'5 :: Maybe a
 sol4'5 = Nothing
 ex4'6 :: [Char]
 ex4'6 = "def F = x1 in F"
+sol4'6 :: Maybe a
 sol4'6 = Nothing
 ex4'7 :: [Char]
 ex4'7 = "def F = \\x1 -> x1 in \\x1 -> F G"
+sol4'7 :: Maybe LamMacroExpr
 sol4'7 = Just (LamDef [("F",LamAbs 1 (LamVar 1))] (LamAbs 1 (LamApp (LamMacro "F") (LamMacro "G"))))
 ex4'8 :: [Char]
 ex4'8 = "def F = \\x1 -> x2 in F"
+sol4'8 :: Maybe a
 sol4'8 = Nothing
 ex4'9 :: [Char]
 ex4'9 = "def F = \\x1 -> x1 in \\x1 -> F g"
+sol4'9 :: Maybe a
 sol4'9 = Nothing
 ex4'10 :: [Char]
 ex4'10 = "\\x1 -> \\x2 -> \\x3 -> x1 x2 x3"
+sol4'10 :: Maybe LamMacroExpr
 sol4'10 = Just (LamDef [] (LamAbs 1 (LamAbs 2 (LamAbs 3 (LamApp (LamApp (LamVar 1) (LamVar 2)) (LamVar 3))))))
 ex4'11 :: [Char]
 ex4'11 = "\\x1 -> x1 x2"
+sol4'11 :: Maybe LamMacroExpr
 sol4'11 = Just (LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2))))
 ex4'12 :: [Char]
 ex4'12 = ""
+sol4'12 :: Maybe a
 sol4'12 = Nothing
 ex4'13 :: [Char]
 ex4'13 = "\\x1 -> (\\x2 -> x3 (\\x4 -> x5)) x6"
+sol4'13 :: Maybe LamMacroExpr
 sol4'13 = Just (LamDef [] (LamAbs 1 (LamApp (LamAbs 2 (LamApp (LamVar 3) (LamAbs 4 (LamVar 5)))) (LamVar 6))))
 
 -- examples to test for challenge 5
@@ -129,35 +162,42 @@ exId :: LamExpr
 exId =  LamAbs 1 (LamVar 1)
 ex5'1 :: LamMacroExpr
 ex5'1 = LamDef [] (LamApp (LamVar 1) (LamVar 2))
+sol5'1 :: LamMacroExpr
 sol5'1 = LamDef [] (LamAbs 0 (LamApp (LamAbs 5 (LamApp (LamVar 5) (LamVar 1))) 
          (LamAbs 3 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamVar 2))) (LamAbs 4 
          (LamApp (LamApp (LamVar 3) (LamVar 4)) (LamVar 0)))))))
 ex5'2 :: LamMacroExpr
 ex5'2 = LamDef [ ("F", exId) ] (LamVar 2)
+sol5'2 :: LamMacroExpr
 sol5'2 = LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp 
         (LamVar 3) (LamVar 1))))))] (LamAbs 4 (LamApp (LamVar 4) (LamVar 2)))
 ex5'3 :: LamMacroExpr
 ex5'3 = LamDef [ ("F", exId) ] (LamMacro "F")
+sol5'3 :: LamMacroExpr
 sol5'3 = LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 
          (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))] (LamMacro "F")
 ex5'4 :: LamMacroExpr
 ex5'4 = LamDef [ ("F", exId) ] (LamApp (LamMacro "F") (LamMacro "F"))
 ex5'5 :: LamMacroExpr
 ex5'5 = LamDef [] exId
+sol5'5 :: LamMacroExpr
 sol5'5 = LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 
          (LamAbs 2 (LamApp (LamVar 2) (LamVar 1))))))
+sol5'4 :: LamMacroExpr
 sol5'4 = LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 2 
          (LamApp (LamVar 2) (LamVar 1))))))] (LamAbs 3 (LamApp 
          (LamMacro "F") (LamAbs 4 (LamApp (LamMacro "F") (LamAbs 5 
          (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 3)))))))
 ex5'6 :: LamMacroExpr
 ex5'6 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2)))
+sol5'6 :: LamMacroExpr
 sol5'6 = LamDef [] (LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp 
          (LamAbs 6 (LamApp (LamVar 6) (LamVar 1))) (LamAbs 4 (LamApp 
          (LamAbs 7 (LamApp (LamVar 7) (LamVar 2))) (LamAbs 5 (LamApp (LamApp 
          (LamVar 4) (LamVar 5)) (LamVar 3))))))))))
 ex5'7 :: LamMacroExpr
 ex5'7 = LamDef [] (LamApp (LamAbs 1 (LamVar 1)) (LamAbs 2 (LamVar 3)))
+sol5'7 :: LamMacroExpr
 sol5'7 = LamDef [] (LamAbs 0 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamAbs 1 
          (LamAbs 7 (LamApp (LamVar 7) (LamVar 1)))))) (LamAbs 4 (LamApp (LamAbs 7 
          (LamApp (LamVar 7) (LamAbs 2 (LamAbs 8 (LamApp (LamVar 8) (LamVar 3)))))) 
@@ -165,12 +205,43 @@ sol5'7 = LamDef [] (LamAbs 0 (LamApp (LamAbs 6 (LamApp (LamVar 6) (LamAbs 1
 ex5'8 :: LamMacroExpr
 ex5'8 = LamDef [("F", LamAbs 1 (LamApp (LamVar 1) (LamVar 2))), ("G", exId)] 
         (LamApp (LamMacro "F") (LamMacro "G"))
+sol5'8 :: LamMacroExpr
 sol5'8 = LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp 
          (LamAbs 6 (LamApp (LamVar 6) (LamVar 1))) (LamAbs 4 (LamApp (LamAbs 7 
          (LamApp (LamVar 7) (LamVar 2))) (LamAbs 5 (LamApp (LamApp (LamVar 4) (LamVar 5)) (LamVar 3
          )))))))))),("G",LamAbs 8 (LamApp (LamVar 8) (LamAbs 1 (LamAbs 9 (LamApp (LamVar 9) 
          (LamVar 1))))))] (LamAbs 10 (LamApp (LamMacro "F") (LamAbs 11 (LamApp (LamMacro "G") 
          (LamAbs 12 (LamApp (LamApp (LamVar 11) (LamVar 12)) (LamVar 10)))))))
+
+-- (\x1 -> x1 x2)
+ex6'1 :: LamMacroExpr
+ex6'1 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2)))
+
+--  def F = \x1 -> x1 in F  
+ex6'2 :: LamMacroExpr
+ex6'2 = LamDef [ ("F",exId) ] (LamMacro "F")
+
+--  (\x1 -> x1) (\x2 -> x2)   
+ex6'3 :: LamMacroExpr
+ex6'3 = LamDef [] ( LamApp exId (LamAbs 2 (LamVar 2)))
+
+--  (\x1 -> x1 x1)(\x1 -> x1 x1)  
+wExp :: LamExpr
+wExp = (LamAbs 1 (LamApp (LamVar 1) (LamVar 1)))
+ex6'4 :: LamMacroExpr
+ex6'4 = LamDef [] (LamApp wExp wExp)
+
+--  def ID = \x1 -> x1 in def FST = (\x1 -> λx2 -> x1) in FST x3 (ID x4) 
+ex6'5 :: LamMacroExpr
+ex6'5 = LamDef [ ("ID",exId) , ("FST",LamAbs 1 (LamAbs 2 (LamVar 1))) ] ( LamApp (LamApp (LamMacro "FST") (LamVar 3)) (LamApp (LamMacro "ID") (LamVar 4)))
+
+--  def FST = (\x1 -> λx2 -> x1) in FST x3 ((\x1 ->x1) x4))   
+ex6'6 :: LamMacroExpr
+ex6'6 = LamDef [ ("FST", LamAbs 1 (LamAbs 2 (LamVar 1)) ) ]  ( LamApp (LamApp (LamMacro "FST") (LamVar 3)) (LamApp (exId) (LamVar 4)))
+
+-- def ID = \x1 -> x1 in def SND = (\x1 -> λx2 -> x2) in SND ((\x1 -> x1 x1) (\x1 -> x1 x1)) ID
+ex6'7 :: LamMacroExpr
+ex6'7 = LamDef [ ("ID",exId) , ("SND",LamAbs 1 (LamAbs 2 (LamVar 2))) ]  (LamApp (LamApp (LamMacro "SND") (LamApp wExp wExp) ) (LamMacro "ID") ) 
 
 -- Test Suites, one per exercise
 tests :: [(String, [(String, IO Bool)])]
@@ -248,43 +319,43 @@ tests =
     [
       (
         "Test 1: check pretty printing a lambda application",
-        return (prettyPrint ex3'1 == "(\\x1 -> x1) (\\x1 -> x1)")
+        return (prettyPrint ex3'1 == sol3'1)
       ),
       (
         "Test 2: check pretty printing a lambda application",
-        return (prettyPrint ex3'7 == "(\\x1 -> x1 x1) (\\x2 -> x2)")
+        return (prettyPrint ex3'7 == sol3'7)
       ),
       (
         "Test 3: check pretty printing a lambda abstraction",
-        return (prettyPrint ex3'2 == "\\x1 -> x1 (\\x1 -> x1)")
+        return (prettyPrint ex3'2 == sol3'2)
       ),
       (
         "Test 4: check pretty printing a lambda abstraction",
-        return (prettyPrint ex3'8 == "\\x1 -> x1 x1")
+        return (prettyPrint ex3'8 == sol3'8)
       ),
       (
         "Test 5: check pretty printing with macro definitions",
-        return (prettyPrint ex3'3 == "def F = \\x1 -> x1 in \\x2 -> x2 F")
+        return (prettyPrint ex3'3 == sol3'3)
       ),
       (
         "Test 6: check pretty printing with macro defined but not in the expression",
-        return (prettyPrint ex3'4 == "def F = \\x1 -> x1 in \\x2 -> F x2")
+        return (prettyPrint ex3'4 == sol3'4)
       ),
       (
         "Test 7: check pretty printing with macro overlapping another macro",
-        return (prettyPrint ex3'6 == "def F = \\x1 -> x1 in def G = \\x1 -> (\\x1 -> x1) x2 in \\x1 -> G x3")
+        return (prettyPrint ex3'6 == sol3'6)
       ),
       (
         "Test 8: check pretty printing with nested macros",
-        return (prettyPrint ex3'5 == "def G = \\x1 -> \\x2 -> x1 in def F = \\x1 -> \\x2 -> x2 in \\x1 -> \\x2 -> G (F (x2 x1) x2)")
+        return (prettyPrint ex3'5 == sol3'5)
       ),
       (
         "Test 9: check nested macros and repeated small macro",
-        return (prettyPrint ex3'9 == "def F = x5 in def G = x5 x2 in \\x5 -> G F")
+        return (prettyPrint ex3'9 == sol3'9)
       ),
       (
         "Test 10: check repeated macros into an expression",
-        return (prettyPrint ex3'40 == "def F = x5 in \\x5 -> F (F F)")
+        return (prettyPrint ex3'10 == sol3'10)
       )
     ]
   ), 
@@ -432,9 +503,11 @@ message ((s, b):ts) count =
       message ts count
 
 createAndSolve :: [ String ] -> Double -> IO Bool
-createAndSolve words maxDensity =   do g <- createWordSearch words maxDensity
-                                       let soln = solveWordSearch words g
-                                       return (checkWordsExist soln)
+createAndSolve words maxDensity =
+  do 
+    g <- createWordSearch words maxDensity
+    let soln = solveWordSearch words g
+    return (checkWordsExist soln)
 
 checkWordsExist :: [(String, Maybe Placement)] -> Bool
 checkWordsExist [] = True

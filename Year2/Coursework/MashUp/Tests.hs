@@ -1,3 +1,10 @@
+-- ==================================================================
+-- (c) University of Southampton 2020 
+-- Title:   Test Cases for comp2209 Functional Programming Challenges
+-- Author:  Theodora-Mara Pislar
+-- Date:    14 Jan 2021
+-- ==================================================================
+
 import Parsing
 import Challenges
 
@@ -213,35 +220,28 @@ sol5'8 = LamDef [("F",LamAbs 0 (LamApp (LamVar 0) (LamAbs 1 (LamAbs 3 (LamApp
          (LamVar 1))))))] (LamAbs 10 (LamApp (LamMacro "F") (LamAbs 11 (LamApp (LamMacro "G") 
          (LamAbs 12 (LamApp (LamApp (LamVar 11) (LamVar 12)) (LamVar 10)))))))
 
+-- examples to test for challenge 6
+
 -- (\x1 -> x1 x2)
 ex6'1 :: LamMacroExpr
 ex6'1 = LamDef [] (LamAbs 1 (LamApp (LamVar 1) (LamVar 2)))
-
 --  def F = \x1 -> x1 in F  
 ex6'2 :: LamMacroExpr
 ex6'2 = LamDef [ ("F",exId) ] (LamMacro "F")
-
 --  (\x1 -> x1) (\x2 -> x2)   
 ex6'3 :: LamMacroExpr
 ex6'3 = LamDef [] ( LamApp exId (LamAbs 2 (LamVar 2)))
-
 --  (\x1 -> x1 x1)(\x1 -> x1 x1)  
 wExp :: LamExpr
 wExp = (LamAbs 1 (LamApp (LamVar 1) (LamVar 1)))
 ex6'4 :: LamMacroExpr
 ex6'4 = LamDef [] (LamApp wExp wExp)
-
---  def ID = \x1 -> x1 in def FST = (\x1 -> λx2 -> x1) in FST x3 (ID x4) 
+--  (\\x1 -> x1 x3) (\\x4 -> x4 x5)
 ex6'5 :: LamMacroExpr
-ex6'5 = LamDef [ ("ID",exId) , ("FST",LamAbs 1 (LamAbs 2 (LamVar 1))) ] ( LamApp (LamApp (LamMacro "FST") (LamVar 3)) (LamApp (LamMacro "ID") (LamVar 4)))
-
---  def FST = (\x1 -> λx2 -> x1) in FST x3 ((\x1 ->x1) x4))   
+ex6'5 = LamDef [] (LamApp (LamAbs 1 (LamApp (LamVar 1) (LamVar 2))) (LamAbs 4 (LamApp (LamVar 4) (LamVar 5))))
+-- \\x1 -> \\x2 -> (\\x3 -> x3 x2) (\\x4 -> x4 x1)
 ex6'6 :: LamMacroExpr
-ex6'6 = LamDef [ ("FST", LamAbs 1 (LamAbs 2 (LamVar 1)) ) ]  ( LamApp (LamApp (LamMacro "FST") (LamVar 3)) (LamApp (exId) (LamVar 4)))
-
--- def ID = \x1 -> x1 in def SND = (\x1 -> λx2 -> x2) in SND ((\x1 -> x1 x1) (\x1 -> x1 x1)) ID
-ex6'7 :: LamMacroExpr
-ex6'7 = LamDef [ ("ID",exId) , ("SND",LamAbs 1 (LamAbs 2 (LamVar 2))) ]  (LamApp (LamApp (LamMacro "SND") (LamApp wExp wExp) ) (LamMacro "ID") ) 
+ex6'6 = LamDef [] (LamAbs 1 (LamAbs 2 (LamApp (LamAbs 3 (LamApp (LamVar 3) (LamVar 2))) (LamAbs 4 (LamApp (LamVar 4) (LamVar 1))))))
 
 -- Test Suites, one per exercise
 tests :: [(String, [(String, IO Bool)])]
@@ -452,7 +452,32 @@ tests =
     ]
   ),
   ("Challenge 6",
-    []
+    [
+      (
+        "Test 1: compare simple application",
+        return (compareInnerOuter ex6'1 10 == (Just 0, Just 0, Just 6, Just 6))
+      ),
+      (
+        "Test 2: compare complex application",
+        return (compareInnerOuter ex6'3 10 == (Just 1, Just 1, Just 8, Just 8)) 
+      ),
+      (
+        "Test 3: compare simple macro definition",
+        return (compareInnerOuter ex6'2 10 == (Just 1, Just 1, Just 2, Just 2))
+      ),
+      (
+        "Test 5: test for non exhaustive lambda application",
+        return (compareInnerOuter ex6'4 10 == (Nothing, Nothing, Nothing, Nothing))
+      ),
+      (
+        "Test 6: test for lambda application",
+        return (compareInnerOuter ex6'5 20 == (Just 2, Just 2, Just 17, Just 17))
+      ),
+      (
+        "Test 7: test for lambda abstraction",
+        return (compareInnerOuter ex6'6 20 == (Just 2, Just 2, Nothing, Nothing))
+      )
+    ]
   ) 
   ]
 
@@ -463,37 +488,23 @@ main =
     putStr ""
     testSuite tests
 
+-- checks each test case for each challenge
 testSuite :: [(String, [(String, IO Bool)])] -> IO ()
 testSuite [] = putStr ""
 testSuite ((s,tc):ts) =
   do
+    -- the heading of the challenge
     mes <- message tc 0
-    putStrLn (outPrefix (s ++ ": " ++ mes)) 
+    putStrLn (getHeading (s ++ ": " ++ mes))
+    -- check which tests failed
     testCases tc
     testSuite ts
 
-testCases :: [(String, IO Bool)] -> IO ()
-testCases [] = putStr ""
-testCases ((s, b):ts) =
-  do
-    bo <- b
-    if bo then
-     testCases ts
-    else do
-     putStr (outPrefix "Did not satisfy assertion: ") 
-     putStrLn s 
-     testCases ts
-      
-
--- Auxiliary functions to support testing and scoring
-outPrefix :: [Char] -> [Char]
-outPrefix msg = "  " ++ msg
-
+-- keelp score of the failed tests
 message :: [(String,IO Bool)] -> Int -> IO String
 message [] count 
   | count /= 0 = return ("failed " ++ show count)
   | count == 0 = return "all test cases passed"
-
 message ((s, b):ts) count =
   do
     bo <- b
@@ -502,6 +513,25 @@ message ((s, b):ts) count =
     else
       message ts count
 
+-- helper function to support testing and scoring
+getHeading :: [Char] -> [Char]
+getHeading msg = "  " ++ msg
+
+-- check which tests failed
+testCases :: [(String, IO Bool)] -> IO ()
+testCases [] = putStr ""
+testCases ((s, b):ts) =
+  do
+    bo <- b
+    if bo then
+     testCases ts
+    else do
+     putStr (getHeading "Did not satisfy assertion: ") 
+     putStrLn s 
+     testCases ts
+
+-- create a word puzzle and solve it
+-- check if all the words hidden are also found by the solver
 createAndSolve :: [ String ] -> Double -> IO Bool
 createAndSolve words maxDensity =
   do 
@@ -509,12 +539,15 @@ createAndSolve words maxDensity =
     let soln = solveWordSearch words g
     return (checkWordsExist soln)
 
+-- check if all the words were found by the solver
 checkWordsExist :: [(String, Maybe Placement)] -> Bool
 checkWordsExist [] = True
 checkWordsExist ((s, p):ps)
+  -- if a placement of one word is Nothing => is not on the board
   | p == Nothing = False 
   | otherwise = checkWordsExist ps
 
+-- check if the board size is as expected when a puzzle is created
 checkBoardSize :: IO [[Char]] -> Int -> IO Bool
 checkBoardSize grid expectedSize = 
   do

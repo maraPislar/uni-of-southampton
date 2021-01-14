@@ -1,8 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
--- comp2209 Functional Programming Challenges
--- (c) University of Southampton 2020
--- Skeleton code to be updated with your solutions
--- The dummy functions here simply return an arbitrary value that is usually wrong 
+-- ===================================================
+-- (c) University of Southampton 2020 
+-- Title:   comp2209 Functional Programming Challenges
+-- Author:  Theodora-Mara Pislar
+-- Date:    14 Jan 2021
+-- ===================================================
 
 -- DO NOT MODIFY THE FOLLOWING LINES OF CODE
 module Challenges (WordSearchGrid,Placement,Posn,Orientation(..),solveWordSearch, createWordSearch,
@@ -147,15 +149,35 @@ solveWordSearch words grid
 createWordSearch :: [ String ] -> Double -> IO WordSearchGrid
 createWordSearch words density =
     do
-        -- create a grid that only consists of dummy characters
-        let grid = replicate size (replicate size '-')
-        -- add the words to be found randomly in the board
-        newGrid <- foldM (flip addWord) grid words
-        -- fill the rest of the board with random chars
-        fillGrid words newGrid []
+        -- check if the density produces a smaller size for the board
+        checkSize <- getMaximumLength words maxi
+        if size < checkSize then
+            do
+                -- create a grid that only consists of dummy characters
+                let grid = replicate checkSize (replicate size '-')
+                -- add the words to be found randomly in the board
+                newGrid <- foldM (flip addWord) grid words
+                -- fill the rest of the board with random chars
+                fillGrid words newGrid []
+        else
+            do
+            -- create a grid that only consists of dummy characters
+            let grid = replicate size (replicate size '-')
+            -- add the words to be found randomly in the board
+            newGrid <- foldM (flip addWord) grid words
+            -- fill the rest of the board with random chars
+            fillGrid words newGrid []
     where
+        maxi = 0
         numberOfHiddenChars = foldr ((+) . length) 0 words
         size = round (sqrt (fromIntegral numberOfHiddenChars / density))
+
+-- determine the biggest word from the list
+getMaximumLength :: [String] -> Int -> IO Int
+getMaximumLength [] maxi = return maxi
+getMaximumLength (word:words) maxi
+    | maxi < length word = getMaximumLength words (length word)
+    | otherwise = getMaximumLength words maxi
 
 -- add one word to the board at a random position and direction
 addWord :: String -> WordSearchGrid -> IO WordSearchGrid
@@ -296,9 +318,9 @@ prettyPrint (LamDef xs lam)
 printExpr :: LamExpr -> String
 printExpr e
     | (LamAbs x e1) <- e = "\\x" ++ show x ++ " -> " ++ printExpr e1
-    | (LamApp x y) <- e     = putParenthesis (LamApp x y)
-    | (LamVar x) <- e       = "x" ++ show x
-    | (LamMacro x) <- e     = x
+    | (LamApp x y)  <- e = putParenthesis (LamApp x y)
+    | (LamVar x)    <- e = "x" ++ show x
+    | (LamMacro x)  <- e = x
 
 -- create a pretty print by adding parenthesis when needed so the expresion will parse to the same tree
 putParenthesis :: LamExpr -> String
@@ -541,7 +563,8 @@ transformExpr (LamApp e1 e2) visited =
         let e = checkForVar startPoint (f : k : visited)
         func <- transformExpr e1 (k : f : e : visited)
         arg <- transformExpr e2 (k : f : e : (k + 1) : (f + 1) : (e + 1) : visited)
-        return (LamAbs k (LamApp func (LamAbs f (LamApp arg (LamAbs e (LamApp (LamApp (LamVar f) (LamVar e)) (LamVar k)))))))
+        return (LamAbs k (LamApp func (LamAbs f (LamApp arg (LamAbs e 
+               (LamApp (LamApp (LamVar f) (LamVar e)) (LamVar k)))))))
 
 -- convert the macros into CPS
 -- keep track of the ints that have been used as names before
@@ -571,53 +594,56 @@ cpsTransform (LamDef macros e)
 
 -- Challenge 6
 
--- check if a variable was used before in a lambda expression
-free :: Int -> LamExpr -> Bool
-free x (LamVar y) = x == y
-free x (LamAbs y e) 
-    | x == y = False
-    | x /= y = free x e
-free x (LamApp e1 e2) = free x e1 || free x e2
+-- comapare the number of steps of different lambda reductions
+compareInnerOuter :: LamMacroExpr -> Int -> ( Maybe Int, Maybe Int, Maybe Int, Maybe Int )
+compareInnerOuter (LamDef [] expr) bound = (inner, outer, innerCPS, outerCPS)
+    where
+        -- transform a lambda macro expression in cps
+        (LamDef [] cpsExpr) = cpsTransform (LamDef [] expr)
+        cpsToCompare = LamDef [] (LamApp cpsExpr identity)
+        -- perform the reductions of each type on the normal expression
+        inner = reduce innerRedn1 (LamDef [] expr) bound step
+        outer = reduce outerRedn1 (LamDef [] expr) bound step
+        -- perform the reduction of each type on the cps expressions
+        innerCPS = reduce innerRedn1 cpsToCompare bound step
+        outerCPS = reduce outerRedn1 cpsToCompare bound step
+        step = 0
+compareInnerOuter (LamDef macros expr) bound = (inner, outer, innerCPS, outerCPS)
+   where
+        -- replace macros in expression
+        newExpr = prelucrateExpr expr macros
+        -- transform a lambda macro expression in cps
+        (LamDef ms cpsExpr) = cpsTransform (LamDef macros newExpr)
+        cpsToCompare = LamDef ms (LamApp cpsExpr identity)
+        -- perform the reductions of each type on the normal expression
+        inner = reduce innerRedn1 (LamDef macros (LamApp newExpr identity)) bound step
+        outer = reduce outerRedn1 (LamDef macros (LamApp newExpr identity)) bound step
+        -- perform the reduction of each type on the cps expressions
+        innerCPS = reduce innerRedn1 cpsToCompare bound step
+        outerCPS = reduce outerRedn1 cpsToCompare bound step
+        step = 0
 
--- rename a variable with the next available name in a lambda expression
-rename :: Int -> LamExpr -> Int
-rename x e 
-    | free (x + 1) e = rename (x + 1) e
-    | otherwise = x + 1
+-- identity function to apply
+identity :: LamExpr
+identity = LamAbs 100 (LamVar 100)
 
--- substitutes expression three for (free) variable two in the expression given as parameter 1
-subst :: LamExpr -> Int -> LamExpr -> LamExpr
-subst (LamVar x) y e 
-    | x == y = e
-    | x /= y = LamVar x
-subst (LamAbs x e1) y e
-    | x /= y && not (free x e) = LamAbs x (subst e1 y e)
-    | x /= y && free x e = let x' = rename 0 e1 in
-        subst (LamAbs x' (subst e1 x (LamVar x'))) y e
-    | x == y = LamAbs x e1
-subst (LamApp e1 e2) y e = LamApp (subst e1 y e) (subst e2 y e)
+-- reduce a lambda macro expression depending on the function passed to it
+-- the bound represents the maximum number of reductions allowed
+reduce :: (LamMacroExpr -> Maybe LamMacroExpr) -> LamMacroExpr -> Int -> Int -> Maybe Int
+reduce f (LamDef macros e) bound step
+   | step > bound = Nothing
+   | not (hasRedex e) = Just step
+   | otherwise = reduce f (LamDef macros currentReduction) bound (step + 1)
+   where 
+         Just (LamDef m currentReduction) = f (LamDef macros e)
 
--- perform one outer reduction on a lambda expression
-oreduction :: LamExpr -> LamExpr
-oreduction (LamVar x) = LamVar x
-oreduction (LamAbs x e) = LamAbs x (oreduction e)
-oreduction (LamApp (LamAbs x e1) e2) = subst e1 x e2
-oreduction (LamApp e1 e2) = LamApp (oreduction e1) e2
-
--- perform one inner reduction on a lambda expression
-ireduction :: LamExpr -> LamExpr
-ireduction (LamVar x) = LamVar x
-ireduction (LamAbs x e) = LamAbs x (ireduction e)
-ireduction (LamApp (LamAbs x e1) e@(LamAbs y e2)) = subst e1 x e
-ireduction (LamApp e@(LamAbs x e1) e2) = LamApp e (ireduction e2)
-ireduction (LamApp e1 e2) = LamApp (ireduction e1) e2
-
--- get macro expression
-getMacroExpr :: String -> [(String, LamExpr)] -> Maybe LamExpr
-getMacroExpr _ [] = Nothing
-getMacroExpr macro ((m,e):macros)
-  | macro == m = Just e
-  | otherwise = getMacroExpr macro macros
+-- check to see if a lambda expression has a reducible expression
+hasRedex :: LamExpr -> Bool
+hasRedex (LamApp (LamAbs x m) n) = True
+hasRedex (LamApp m n) = (hasRedex m) || (hasRedex n)
+hasRedex (LamAbs x m) = hasRedex m
+hasRedex (LamVar x) = False
+hasRedex (LamMacro x) = False
 
 -- replace macro in final expression
 prelucrateExpr :: LamExpr -> [(String, LamExpr)] -> LamExpr
@@ -628,45 +654,54 @@ prelucrateExpr (LamVar x) macros = LamVar x
 prelucrateExpr (LamAbs x e) macros = LamAbs x (prelucrateExpr e macros)
 prelucrateExpr (LamApp e1 e2) macros = LamApp (prelucrateExpr e1 macros) (prelucrateExpr e2 macros)
 
--- one inner reduction for a simple macro expression
-innerRedn1 :: LamMacroExpr -> Maybe LamMacroExpr
-innerRedn1 (LamDef macros e)= Just (LamDef macros (ireduction newExpr))
-  where
-    newExpr = prelucrateExpr e macros
+-- get macro expression
+getMacroExpr :: String -> [(String, LamExpr)] -> Maybe LamExpr
+getMacroExpr _ [] = Nothing
+getMacroExpr macro ((m,e):macros)
+  | macro == m = Just e
+  | otherwise = getMacroExpr macro macros
 
 -- one outer reduction for a simple macro expression
 outerRedn1 :: LamMacroExpr -> Maybe LamMacroExpr
-outerRedn1 (LamDef macros e) = Just (LamDef macros (oreduction newExpr))
-  where
-    newExpr = prelucrateExpr e macros
+outerRedn1 (LamDef macros e) = Just (LamDef macros (oreduction e))
 
--- check if a lambda expression is a lambda application
-isApp :: LamExpr -> Bool
-isApp (LamApp e1 e2) = True
-isApp (LamAbs x e) = False
-isApp (LamVar x) = False
-isApp (LamMacro x) = False
+-- one inner reduction for a simple macro expression
+innerRedn1 :: LamMacroExpr -> Maybe LamMacroExpr
+innerRedn1 (LamDef macros e)= Just (LamDef macros (fst (ireduction e)))
 
--- reduce a lambda macro expression depending on the function passed to it
--- the bound represents the maximum number of reductions allowed
-reduceExpressions :: (LamMacroExpr -> Maybe LamMacroExpr) -> LamMacroExpr -> Int -> Int -> Maybe Int
-reduceExpressions reduce (LamDef macros e) bound step
-   | step > bound = Nothing
-   | currentReduction == previousReduction && not (isApp currentReduction) = Just step
-   | otherwise = reduceExpressions reduce (LamDef macros currentReduction) bound (step + 1)
-   where 
-         Just (LamDef m currentReduction) = reduce (LamDef macros e)
-         previousReduction = e
+-- perform one outer reduction on a lambda expression
+oreduction :: LamExpr -> LamExpr
+oreduction (LamVar x) = LamVar x
+oreduction (LamAbs x e) = LamAbs x (oreduction e)
+oreduction (LamApp (LamAbs x e1) e2) = substitute e1 x e2
+oreduction (LamApp e1 e2) = LamApp (oreduction e1) e2
 
-identity :: LamExpr
-identity = LamAbs 100 (LamVar 100)
+-- perform one inner reduction on a lambda expression
+ireduction :: LamExpr -> (LamExpr, Bool)
+ireduction (LamVar n) = (LamVar n, False)
+ireduction (LamAbs n e) = (LamAbs n (fst (ireduction e)), False)
+ireduction expr@(LamApp e1@(LamAbs n e) e2) 
+  | snd result1 == False && snd result2 == False = (oreduction expr, False)
+  where result1 = ireduction e1
+        result2 = ireduction e2
+ireduction expr@(LamApp e1 e2) 
+  | snd result1 == False && snd result2 == False = (oreduction expr, False)
+  where result1 = ireduction e1
+        result2 = ireduction e2
 
-compareInnerOuter :: LamMacroExpr -> Int -> ( Maybe Int, Maybe Int, Maybe Int, Maybe Int )
-compareInnerOuter expr bound = (inner, outer, innerCPS, outerCPS)
-   where
-        (LamDef ms cpsExpr) = cpsTransform expr
-        cpsToCompare = LamDef ms (LamApp cpsExpr identity)
-        inner = reduceExpressions innerRedn1 expr bound 0
-        outer = reduceExpressions outerRedn1 expr bound 0
-        innerCPS = reduceExpressions innerRedn1 cpsToCompare bound 0
-        outerCPS = reduceExpressions outerRedn1 cpsToCompare bound 0
+-- substitutes expression three for (free) variable two in the expression given as parameter 1
+substitute :: LamExpr -> Int ->  LamExpr -> LamExpr
+substitute (LamVar n) m e | n == m = e
+substitute (LamVar n) m e | n /= m = LamVar n
+substitute (LamAbs n e1) m e  | n /= m && not (isFree n e)  = LamAbs n (substitute e1 m e)
+substitute (LamAbs n e1) m e  | n /= m && isFree n e  = 
+    substitute (LamAbs (n + 1) (substitute e1 n (LamVar (n + 1)))) m e
+substitute (LamAbs n e1) m e  | n == m  = LamAbs n e1
+substitute (LamApp e1 e2) m e = LamApp (substitute e1 m e) (substitute e2 m e) 
+
+-- check to see whether a variable occurs free in the given lambda expression
+isFree :: Int -> LamExpr -> Bool
+isFree n (LamVar m) =  n == m
+isFree n (LamAbs m e) | n == m = False
+isFree n (LamAbs m e) | n /= m = isFree n e
+isFree n (LamApp e1 e2) = (isFree n e1) || (isFree n e2)

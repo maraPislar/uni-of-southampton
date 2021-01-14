@@ -1,15 +1,14 @@
 -- ==================================================================
--- (c) University of Southampton 2020 
--- Title:   Test Cases for comp2209 Functional Programming Challenges
+-- (c) University of Southampton 2021 
+-- Title :  Test Cases for comp2209 Functional Programming Challenges
 -- Author:  Theodora-Mara Pislar
--- Date:    14 Jan 2021
+-- Date  :  14 Jan 2021
 -- ==================================================================
 
 import Parsing
 import Challenges
 
--- Main program, testing constants and functions start here
---
+-- Test cases for each challenge
 
 -- examples to test for challenge 1
 exGrid1'1 :: [[Char]]

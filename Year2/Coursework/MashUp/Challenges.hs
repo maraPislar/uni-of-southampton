@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 -- ===================================================
--- (c) University of Southampton 2020 
--- Title:   comp2209 Functional Programming Challenges
+-- (c) University of Southampton 2021 
+-- Title :  comp2209 Functional Programming Challenges
 -- Author:  Theodora-Mara Pislar
--- Date:    14 Jan 2021
+-- Date  :  14 Jan 2021
 -- ===================================================
 
 -- DO NOT MODIFY THE FOLLOWING LINES OF CODE

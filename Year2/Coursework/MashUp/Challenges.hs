@@ -154,7 +154,7 @@ createWordSearch words density =
         if size < checkSize then
             do
                 -- create a grid that only consists of dummy characters
-                let grid = replicate checkSize (replicate size '-')
+                let grid = replicate checkSize (replicate (checkSize + 1) '-')
                 -- add the words to be found randomly in the board
                 newGrid <- foldM (flip addWord) grid words
                 -- fill the rest of the board with random chars

@@ -1,4 +1,4 @@
-# Labs
+# Semester 1 - Labs
 
 ## Lab 3
 

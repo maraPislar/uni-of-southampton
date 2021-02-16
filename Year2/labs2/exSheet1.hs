@@ -9,3 +9,12 @@ zipL (x:xs, y:ys)
 unzipL :: [[a]] -> ([a], [a])
 unzipL [] = ([], [])
 unzipL ([a, b]:xs) = (a : fst (unzipL xs), b : snd (unzipL xs))
+
+-- exercise 2
+
+zipL2 :: ([a], [a]) -> [[a]]
+zipL2 ([], []) = []
+zipL2 (x:xs, []) = [x] : zipL2 (xs, [])
+zipL2 ([], y : ys) = [y] : zipL2 ([], ys)
+zipL2 (x: xs, y:ys) = [x, y] : zipL2 (xs, ys)
+

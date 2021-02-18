@@ -18,3 +18,18 @@ zipL2 (x:xs, []) = [x] : zipL2 (xs, [])
 zipL2 ([], y : ys) = [y] : zipL2 ([], ys)
 zipL2 (x: xs, y:ys) = [x, y] : zipL2 (xs, ys)
 
+-- exercise 3
+
+multiZipL :: [[a]] -> [[a]]
+multiZipL = multiZip 0
+
+multiZip :: Int -> [[a]] -> [[a]]
+multiZip i xss
+    | null (takePos i xss) = [] 
+    | otherwise = takePos i xss : multiZip (i + 1) xss
+
+takePos :: Int -> [[a]] -> [a]
+takePos _ [] = []
+takePos i (xs:xss)
+    | i >= length xs = takePos i xss
+    | otherwise = xs!!i : takePos i xss

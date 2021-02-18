@@ -27,7 +27,7 @@ multiZipL = multiZip 0
 
 multiZip :: Int -> [[a]] -> [[a]]
 multiZip i xss
-    | null (takePos i xss) = [] 
+    | null (takePos i xss) = []
     | otherwise = takePos i xss : multiZip (i + 1) xss
 
 takePos :: Int -> [[a]] -> [a]
@@ -39,7 +39,7 @@ takePos i (xs:xss)
 -- exercise 4
 
 multiZipF :: IO ()
-multiZipF = 
+multiZipF =
     do
         let fileName = "input.csv"
         input <- readFile fileName
@@ -47,4 +47,4 @@ multiZipF =
         either handleError doWork csv
 
 handleError csv = putStrLn "error parsing"
-doWork csv = (print.multiZipL) csv
+doWork = print.multiZipL

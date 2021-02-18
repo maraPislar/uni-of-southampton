@@ -1,3 +1,5 @@
+import Text.CSV
+
 -- exercise 1
 
 zipL :: ([a], [a]) -> [[a]]
@@ -33,3 +35,16 @@ takePos _ [] = []
 takePos i (xs:xss)
     | i >= length xs = takePos i xss
     | otherwise = xs!!i : takePos i xss
+
+-- exercise 4
+
+multiZipF :: IO ()
+multiZipF = 
+    do
+        let fileName = "input.csv"
+        input <- readFile fileName
+        let csv = parseCSV fileName input
+        either handleError doWork csv
+
+handleError csv = putStrLn "error parsing"
+doWork csv = (print.multiZipL) csv
